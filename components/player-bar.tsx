@@ -1,173 +1,186 @@
 "use client";
-import { useState, useRef, useEffect } from "react";
-import { X, ExternalLink, Disc3, Music } from "lucide-react";
+import { useState } from "react";
+import { X, Disc3, ExternalLink, Music } from "lucide-react";
 import { usePlayer } from "@/context/player-context";
+
+const A = { border:"#e2e8f0", t1:"#0f172a", t3:"#334155", t4:"#64748b", t5:"#94a3b8", accent:"#00B4D8" };
+
+// Platform link builders
+function buildLinks(artist: string, title: string) {
+  const q = encodeURIComponent(`${artist} ${title}`);
+  const qArtist = encodeURIComponent(artist);
+  return [
+    {
+      id: "youtube",
+      label: "YouTube",
+      color: "#FF0000",
+      bg: "#fff1f1",
+      hoverBg: "#ffe0e0",
+      href: `https://www.youtube.com/results?search_query=${q}`,
+      abbr: "YT",
+    },
+    {
+      id: "soundcloud",
+      label: "SoundCloud",
+      color: "#FF5500",
+      bg: "#fff4f0",
+      hoverBg: "#ffe8e0",
+      href: `https://soundcloud.com/search?q=${q}`,
+      abbr: "SC",
+    },
+    {
+      id: "beatport",
+      label: "Beatport",
+      color: "#04BE5B",
+      bg: "#f0fdf6",
+      hoverBg: "#dcfce7",
+      href: `https://www.beatport.com/search?q=${q}`,
+      abbr: "BP",
+    },
+    {
+      id: "spotify",
+      label: "Spotify",
+      color: "#1DB954",
+      bg: "#f0fdf6",
+      hoverBg: "#dcfce7",
+      href: `https://open.spotify.com/search/${q}`,
+      abbr: "SPF",
+    },
+  ];
+}
 
 export default function PlayerBar() {
   const { currentTrack, isPlaying, stop } = usePlayer();
-  const [loaded, setLoaded] = useState(false);
-  const prevId = useRef<string | null>(null);
-
-  useEffect(() => {
-    if (currentTrack?.id !== prevId.current) {
-      setLoaded(false);
-      prevId.current = currentTrack?.id ?? null;
-    }
-  }, [currentTrack]);
+  const [hoveredPlatform, setHoveredPlatform] = useState<string | null>(null);
 
   if (!currentTrack) return null;
 
-  const query = `${currentTrack.artist} ${currentTrack.title} official`;
-  const ytQuery = encodeURIComponent(query);
-  const scQuery = encodeURIComponent(`${currentTrack.artist} ${currentTrack.title}`);
-
-  // YouTube embed search — works with no API key, auto-plays first result
-  const ytSrc = `https://www.youtube.com/embed?listType=search&list=${ytQuery}&autoplay=1&controls=1&modestbranding=1&rel=0&fs=0`;
+  const links = buildLinks(currentTrack.artist, currentTrack.title);
 
   return (
     <div style={{
-      position:"fixed", bottom:0, left:0, right:0, height:72, zIndex:50,
-      backgroundColor:"#fff", borderTop:"1px solid #e2e8f0",
-      boxShadow:"0 -4px 24px rgba(0,0,0,0.07)",
-      display:"flex", alignItems:"stretch"
+      position: "fixed", bottom: 0, left: 0, right: 0, height: 68, zIndex: 50,
+      backgroundColor: "#fff", borderTop: `1px solid ${A.border}`,
+      boxShadow: "0 -4px 24px rgba(0,0,0,0.06)",
+      display: "flex", alignItems: "stretch",
     }}>
+
       {/* Track info */}
       <div style={{
-        width:260, flexShrink:0, borderRight:"1px solid #f1f5f9",
-        display:"flex", alignItems:"center", gap:12, padding:"0 16px"
+        width: 280, flexShrink: 0, borderRight: `1px solid #f1f5f9`,
+        display: "flex", alignItems: "center", gap: 12, padding: "0 18px",
       }}>
         <div style={{
-          width:40, height:40, borderRadius:10, flexShrink:0,
-          backgroundColor:"rgba(0,180,216,0.1)", border:"1px solid rgba(0,180,216,0.2)",
-          display:"flex", alignItems:"center", justifyContent:"center"
+          width: 38, height: 38, borderRadius: 10, flexShrink: 0,
+          backgroundColor: "rgba(0,180,216,0.1)", border: "1px solid rgba(0,180,216,0.2)",
+          display: "flex", alignItems: "center", justifyContent: "center",
         }}>
           {isPlaying ? (
-            <div style={{ display:"flex", alignItems:"flex-end", gap:2, height:20 }}>
+            <div style={{ display: "flex", alignItems: "flex-end", gap: 2, height: 18 }}>
               {[1,2,3,4].map(i => (
                 <div key={i} style={{
-                  width:3, borderRadius:2, backgroundColor:"#00B4D8",
-                  animation:`playerBar ${0.5+i*0.1}s ease-in-out infinite alternate`,
-                  animationDelay:`${i*0.1}s`,
-                  height:`${35+i*12}%`
+                  width: 3, borderRadius: 2, backgroundColor: A.accent,
+                  animation: `playerBar ${0.5 + i * 0.1}s ease-in-out infinite alternate`,
+                  animationDelay: `${i * 0.1}s`,
+                  height: `${30 + i * 14}%`,
                 }} />
               ))}
             </div>
           ) : (
-            <Disc3 size={18} color="#00B4D8" />
+            <Disc3 size={17} color={A.accent} />
           )}
         </div>
-        <div style={{ minWidth:0, flex:1 }}>
-          <p style={{ fontSize:13, fontWeight:600, color:"#0f172a", margin:0, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <p style={{ fontSize: 13, fontWeight: 600, color: A.t1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {currentTrack.title}
           </p>
-          <p style={{ fontSize:11, color:"#64748b", margin:"2px 0 0", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
-            {currentTrack.artist}
+          <p style={{ fontSize: 11, color: A.t4, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {currentTrack.artist}{currentTrack.label ? ` · ${currentTrack.label}` : ""}
           </p>
         </div>
       </div>
 
-      {/* YouTube embed */}
-      <div style={{ flex:1, position:"relative", overflow:"hidden", backgroundColor:"#f8fafc" }}>
-        {!loaded && (
-          <div style={{
-            position:"absolute", inset:0, display:"flex", alignItems:"center",
-            justifyContent:"center", gap:10, backgroundColor:"#f8fafc", zIndex:2
-          }}>
-            <div style={{
-              width:16, height:16, borderRadius:"50%",
-              border:"2px solid #e2e8f0", borderTopColor:"#00B4D8",
-              animation:"spin 0.7s linear infinite"
-            }} />
-            <span style={{ fontSize:12, color:"#94a3b8" }}>
-              Searching for "{currentTrack.artist} — {currentTrack.title}"…
+      {/* Center: "Listen on" platform buttons */}
+      <div style={{
+        flex: 1, display: "flex", alignItems: "center",
+        justifyContent: "center", gap: 8, padding: "0 24px",
+      }}>
+        <span style={{ fontSize: 11, color: A.t5, marginRight: 4, whiteSpace: "nowrap" }}>
+          Listen on
+        </span>
+        {links.map(link => {
+          const isHovered = hoveredPlatform === link.id;
+          return (
+            <a
+              key={link.id}
+              href={link.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              onMouseEnter={() => setHoveredPlatform(link.id)}
+              onMouseLeave={() => setHoveredPlatform(null)}
+              style={{
+                display: "flex", alignItems: "center", gap: 7,
+                padding: "6px 14px", borderRadius: 20,
+                border: `1.5px solid ${isHovered ? link.color + "55" : A.border}`,
+                backgroundColor: isHovered ? link.bg : "#fafafa",
+                textDecoration: "none", transition: "all 0.15s",
+                boxShadow: isHovered ? `0 2px 8px ${link.color}22` : "none",
+              }}
+            >
+              <span style={{
+                width: 16, height: 16, borderRadius: "50%",
+                backgroundColor: link.color,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                flexShrink: 0,
+              }}>
+                <ExternalLink size={8} color="#fff" />
+              </span>
+              <span style={{
+                fontSize: 12, fontWeight: 500,
+                color: isHovered ? link.color : A.t3,
+                whiteSpace: "nowrap",
+              }}>
+                {link.label}
+              </span>
+            </a>
+          );
+        })}
+
+        {/* BPM / Key / Energy chips */}
+        <div style={{ display: "flex", gap: 6, marginLeft: 12 }}>
+          {currentTrack.bpm && (
+            <span style={{ padding: "3px 8px", borderRadius: 6, backgroundColor: "#f1f5f9", fontFamily: "monospace", fontSize: 10, color: A.t4 }}>
+              {currentTrack.bpm} BPM
             </span>
-          </div>
-        )}
-        <iframe
-          key={currentTrack.id}
-          src={ytSrc}
-          style={{
-            width:"100%", height:"100%", border:"none",
-            opacity: loaded ? 1 : 0,
-            transition:"opacity 0.3s"
-          }}
-          allow="autoplay; encrypted-media"
-          allowFullScreen={false}
-          onLoad={() => setLoaded(true)}
-        />
+          )}
+          {currentTrack.key && (
+            <span style={{ padding: "3px 8px", borderRadius: 6, backgroundColor: "#f1f5f9", fontFamily: "monospace", fontSize: 10, color: A.t4 }}>
+              {currentTrack.key}
+            </span>
+          )}
+          {currentTrack.energy && (
+            <span style={{ padding: "3px 8px", borderRadius: 6, backgroundColor: "rgba(0,180,216,0.1)", fontFamily: "monospace", fontSize: 10, color: A.accent }}>
+              E{currentTrack.energy}
+            </span>
+          )}
+        </div>
       </div>
 
-      {/* Meta chips + links */}
-      <div style={{
-        width:210, flexShrink:0, borderLeft:"1px solid #f1f5f9",
-        display:"flex", alignItems:"center", gap:6, padding:"0 14px"
-      }}>
-        {currentTrack.bpm && (
-          <span style={{ padding:"3px 7px", borderRadius:6, backgroundColor:"#f1f5f9", fontFamily:"monospace", fontSize:10, color:"#64748b", flexShrink:0 }}>
-            {currentTrack.bpm} BPM
-          </span>
-        )}
-        {currentTrack.key && (
-          <span style={{ padding:"3px 7px", borderRadius:6, backgroundColor:"#f1f5f9", fontFamily:"monospace", fontSize:10, color:"#64748b", flexShrink:0 }}>
-            {currentTrack.key}
-          </span>
-        )}
-        {currentTrack.energy && (
-          <span style={{ padding:"3px 7px", borderRadius:6, backgroundColor:"rgba(0,180,216,0.1)", fontFamily:"monospace", fontSize:10, color:"#00B4D8", flexShrink:0 }}>
-            E{currentTrack.energy}
-          </span>
-        )}
-
-        <div style={{ marginLeft:"auto", display:"flex", gap:4, flexShrink:0 }}>
-          {/* SoundCloud fallback */}
-          <a
-            href={`https://soundcloud.com/search?q=${scQuery}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            title="Search on SoundCloud"
-            style={{
-              width:28, height:28, borderRadius:7, display:"flex",
-              alignItems:"center", justifyContent:"center",
-              color:"#94a3b8", textDecoration:"none", backgroundColor:"transparent",
-              border:"1px solid #e2e8f0", fontSize:10, fontWeight:600
-            }}
-            onMouseEnter={e => e.currentTarget.style.backgroundColor="#fff7ed"}
-            onMouseLeave={e => e.currentTarget.style.backgroundColor="transparent"}
-          >
-            SC
-          </a>
-          {/* YouTube direct */}
-          <a
-            href={`https://www.youtube.com/results?search_query=${ytQuery}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            title="Open on YouTube"
-            style={{
-              width:28, height:28, borderRadius:7, display:"flex",
-              alignItems:"center", justifyContent:"center",
-              color:"#94a3b8", textDecoration:"none", backgroundColor:"transparent",
-              border:"1px solid #e2e8f0"
-            }}
-            onMouseEnter={e => e.currentTarget.style.backgroundColor="#f1f5f9"}
-            onMouseLeave={e => e.currentTarget.style.backgroundColor="transparent"}
-          >
-            <ExternalLink size={12} />
-          </a>
-          {/* Close */}
-          <button
-            onClick={stop}
-            title="Close player"
-            style={{
-              width:28, height:28, borderRadius:7, border:"1px solid #e2e8f0",
-              cursor:"pointer", display:"flex", alignItems:"center",
-              justifyContent:"center", color:"#94a3b8", backgroundColor:"transparent"
-            }}
-            onMouseEnter={e => { e.currentTarget.style.backgroundColor="#fee2e2"; e.currentTarget.style.color="#ef4444"; e.currentTarget.style.borderColor="#fecaca"; }}
-            onMouseLeave={e => { e.currentTarget.style.backgroundColor="transparent"; e.currentTarget.style.color="#94a3b8"; e.currentTarget.style.borderColor="#e2e8f0"; }}
-          >
-            <X size={13} />
-          </button>
-        </div>
+      {/* Close */}
+      <div style={{ flexShrink: 0, display: "flex", alignItems: "center", padding: "0 14px", borderLeft: "1px solid #f1f5f9" }}>
+        <button
+          onClick={stop}
+          title="Close player"
+          style={{
+            width: 28, height: 28, borderRadius: 7, border: `1px solid ${A.border}`,
+            cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+            color: A.t5, backgroundColor: "transparent", transition: "all 0.12s",
+          }}
+          onMouseEnter={e => { e.currentTarget.style.backgroundColor = "#fef2f2"; e.currentTarget.style.color = "#ef4444"; e.currentTarget.style.borderColor = "#fecaca"; }}
+          onMouseLeave={e => { e.currentTarget.style.backgroundColor = "transparent"; e.currentTarget.style.color = A.t5; e.currentTarget.style.borderColor = A.border; }}
+        >
+          <X size={13} />
+        </button>
       </div>
 
       <style>{`
@@ -175,7 +188,6 @@ export default function PlayerBar() {
           from { transform: scaleY(0.3); }
           to   { transform: scaleY(1); }
         }
-        @keyframes spin { to { transform: rotate(360deg); } }
       `}</style>
     </div>
   );
