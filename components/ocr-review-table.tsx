@@ -1,203 +1,77 @@
 "use client";
-
 import { useState } from "react";
 import { Edit2, Trash2, RefreshCw, CheckCircle, AlertTriangle, XCircle } from "lucide-react";
-import { cn, confidenceLabel } from "@/lib/utils";
+import { confidenceLabel } from "@/lib/utils";
 import { mockOcrTracks } from "@/data/mockTracks";
 
-interface OcrRow {
-  id: string;
-  rawText: string;
-  artist: string;
-  title: string;
-  label: string;
-  year: number;
-  confidence: number;
-  verified: boolean;
-  bpm?: number;
-  key?: string;
-}
+const P = { panel:"#C8C8CC", border:"rgba(0,0,0,0.09)", t1:"#111112", t2:"#3A3A42", t4:"#7A7A84", t5:"#9A9AA4", accent:"#D45A00" };
 
-interface OcrReviewTableProps {
-  tracks?: OcrRow[];
-  onConfirm?: (tracks: OcrRow[]) => void;
-}
+interface OcrRow { id:string; rawText:string; artist:string; title:string; label:string; year:number; confidence:number; verified:boolean; }
 
-const ConfidenceBadge = ({ value }: { value: number }) => {
-  const level = confidenceLabel(value);
-  const pct = Math.round(value * 100);
-  return (
-    <div className="flex items-center gap-1.5">
-      {level === "high" ? (
-        <CheckCircle className="h-3.5 w-3.5 text-teal-400" />
-      ) : level === "medium" ? (
-        <AlertTriangle className="h-3.5 w-3.5 text-yellow-400" />
-      ) : (
-        <XCircle className="h-3.5 w-3.5 text-red-400" />
-      )}
-      <span
-        className={cn(
-          "text-xs font-mono",
-          level === "high" ? "text-teal-400" : level === "medium" ? "text-yellow-400" : "text-red-400"
-        )}
-      >
-        {pct}%
-      </span>
-    </div>
-  );
-};
-
-export default function OcrReviewTable({ tracks = mockOcrTracks, onConfirm }: OcrReviewTableProps) {
-  const [rows, setRows] = useState<OcrRow[]>(tracks as OcrRow[]);
-  const [editingId, setEditingId] = useState<string | null>(null);
+export default function OcrReviewTable({ tracks=mockOcrTracks as OcrRow[], onConfirm }: { tracks?: OcrRow[]; onConfirm?: (t:OcrRow[])=>void }) {
+  const [rows, setRows] = useState<OcrRow[]>(tracks);
+  const [editingId, setEditingId] = useState<string|null>(null);
   const [editData, setEditData] = useState<Partial<OcrRow>>({});
 
-  const removeRow = (id: string) => setRows((r) => r.filter((row) => row.id !== id));
+  const low = rows.filter(r=>confidenceLabel(r.confidence)==="low").length;
 
-  const startEdit = (row: OcrRow) => {
-    setEditingId(row.id);
-    setEditData({ artist: row.artist, title: row.title, label: row.label, year: row.year });
+  const ConfBadge = ({v}:{v:number}) => {
+    const l = confidenceLabel(v);
+    const pct = Math.round(v*100);
+    const color = l==="high"?"#16A34A":l==="medium"?"#D97706":"#DC2626";
+    const Icon = l==="high"?CheckCircle:l==="medium"?AlertTriangle:XCircle;
+    return <span style={{ display:"flex",alignItems:"center",gap:4,fontFamily:"monospace",fontSize:11,color }}><Icon size={12}/>{pct}%</span>;
   };
-
-  const saveEdit = (id: string) => {
-    setRows((r) =>
-      r.map((row) =>
-        row.id === id ? { ...row, ...editData, verified: true, confidence: Math.max(row.confidence, 0.95) } : row
-      )
-    );
-    setEditingId(null);
-  };
-
-  const rerunOcr = (id: string) => {
-    // Stub: simulate improved confidence after re-run
-    setRows((r) =>
-      r.map((row) =>
-        row.id === id ? { ...row, confidence: Math.min(1, row.confidence + 0.15) } : row
-      )
-    );
-  };
-
-  const lowConfidenceCount = rows.filter((r) => confidenceLabel(r.confidence) === "low").length;
 
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <div style={{ display:"flex",flexDirection:"column",gap:12 }}>
+      <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between" }}>
         <div>
-          <h3 className="text-sm font-semibold text-white">OCR Extraction Review</h3>
-          <p className="text-xs text-zinc-500">
-            {rows.length} tracks detected
-            {lowConfidenceCount > 0 && (
-              <span className="ml-2 text-yellow-400">
-                · {lowConfidenceCount} need review
-              </span>
-            )}
-          </p>
+          <p style={{ fontSize:13,fontWeight:600,color:P.t1,margin:0 }}>OCR Extraction Review</p>
+          <p style={{ fontSize:12,color:P.t4,marginTop:2 }}>{rows.length} tracks detected{low>0&&<span style={{ color:"#D97706",marginLeft:8 }}>· {low} need review</span>}</p>
         </div>
-        <div className="flex gap-2">
-          <button
-            onClick={() => rows.forEach((r) => r.confidence < 0.8 && rerunOcr(r.id))}
-            className="flex items-center gap-1.5 rounded-md border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-zinc-400 transition hover:bg-white/10 hover:text-white"
-          >
-            <RefreshCw className="h-3 w-3" />
-            Re-run OCR
+        <div style={{ display:"flex",gap:8 }}>
+          <button onClick={()=>rows.forEach(r=>r.confidence<0.8&&setRows(p=>p.map(x=>x.id===r.id?{...x,confidence:Math.min(1,x.confidence+0.15)}:x)))} style={{ display:"flex",alignItems:"center",gap:6,padding:"6px 12px",borderRadius:6,border:`1px solid ${P.border}`,backgroundColor:"rgba(0,0,0,0.05)",fontSize:12,color:P.t4,cursor:"pointer" }}>
+            <RefreshCw size={12}/> Re-run OCR
           </button>
-          <button
-            onClick={() => onConfirm?.(rows)}
-            className="flex items-center gap-1.5 rounded-md bg-teal-500/20 px-3 py-1.5 text-xs font-medium text-teal-300 ring-1 ring-teal-500/30 transition hover:bg-teal-500/30"
-          >
-            <CheckCircle className="h-3 w-3" />
-            Confirm Playlist
+          <button onClick={()=>onConfirm?.(rows)} style={{ display:"flex",alignItems:"center",gap:6,padding:"6px 12px",borderRadius:6,backgroundColor:"rgba(212,90,0,0.10)",border:"1px solid rgba(212,90,0,0.20)",fontSize:12,fontWeight:600,color:P.accent,cursor:"pointer" }}>
+            <CheckCircle size={12}/> Confirm
           </button>
         </div>
       </div>
-
-      {/* Table */}
-      <div className="overflow-hidden rounded-xl border border-white/8 bg-[#15151B]">
-        <table className="w-full text-sm">
+      <div style={{ borderRadius:12,border:`1px solid ${P.border}`,overflow:"hidden" }}>
+        <table style={{ width:"100%",borderCollapse:"collapse" }}>
           <thead>
-            <tr className="border-b border-white/6">
-              {["#", "Artist", "Track", "Label", "Year", "Confidence", ""].map((h) => (
-                <th key={h} className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-widest text-zinc-600">
-                  {h}
-                </th>
+            <tr>
+              {["#","Artist","Track","Label","Year","Confidence",""].map(h=>(
+                <th key={h} style={{ padding:"10px 16px",textAlign:"left",fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em",color:P.t5,borderBottom:`1px solid ${P.border}`,backgroundColor:P.panel }}>{h}</th>
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-white/4">
-            {rows.map((row, i) => {
+          <tbody>
+            {rows.map((row,i)=>{
               const level = confidenceLabel(row.confidence);
-              const isEditing = editingId === row.id;
+              const isEditing = editingId===row.id;
               return (
-                <tr
-                  key={row.id}
-                  className={cn(
-                    "group transition-colors",
-                    level === "low" ? "bg-red-500/3 hover:bg-red-500/6" : "hover:bg-white/2"
-                  )}
-                >
-                  <td className="w-10 px-4 py-3 font-mono text-xs text-zinc-600">{i + 1}</td>
-
-                  <td className="px-4 py-3">
-                    {isEditing ? (
-                      <input
-                        value={editData.artist ?? ""}
-                        onChange={(e) => setEditData({ ...editData, artist: e.target.value })}
-                        className="w-full rounded bg-white/8 px-2 py-1 text-sm text-white outline-none focus:ring-1 focus:ring-teal-500/40"
-                      />
-                    ) : (
-                      <span className="font-medium text-zinc-200">{row.artist}</span>
-                    )}
+                <tr key={row.id} style={{ borderBottom:`1px solid ${P.border}`,backgroundColor:level==="low"?"rgba(220,38,38,0.05)":i%2===0?P.panel:"rgba(0,0,0,0.02)" }}>
+                  <td style={{ padding:"10px 16px",fontFamily:"monospace",fontSize:11,color:P.t5 }}>{i+1}</td>
+                  <td style={{ padding:"10px 16px" }}>
+                    {isEditing ? <input value={editData.artist??""} onChange={e=>setEditData({...editData,artist:e.target.value})} style={{ width:"100%",padding:"4px 8px",borderRadius:4,border:`1px solid ${P.border}`,backgroundColor:"white",fontSize:12,color:P.t1 }}/> : <span style={{ fontSize:13,fontWeight:600,color:P.t1 }}>{row.artist}</span>}
                   </td>
-
-                  <td className="px-4 py-3">
-                    {isEditing ? (
-                      <input
-                        value={editData.title ?? ""}
-                        onChange={(e) => setEditData({ ...editData, title: e.target.value })}
-                        className="w-full rounded bg-white/8 px-2 py-1 text-sm text-white outline-none focus:ring-1 focus:ring-teal-500/40"
-                      />
-                    ) : (
-                      <span className="text-zinc-300">{row.title}</span>
-                    )}
+                  <td style={{ padding:"10px 16px" }}>
+                    {isEditing ? <input value={editData.title??""} onChange={e=>setEditData({...editData,title:e.target.value})} style={{ width:"100%",padding:"4px 8px",borderRadius:4,border:`1px solid ${P.border}`,backgroundColor:"white",fontSize:12,color:P.t1 }}/> : <span style={{ fontSize:13,color:P.t2 }}>{row.title}</span>}
                   </td>
-
-                  <td className="px-4 py-3 text-xs text-zinc-500">{row.label}</td>
-                  <td className="px-4 py-3 font-mono text-xs text-zinc-600">{row.year}</td>
-
-                  <td className="px-4 py-3">
-                    <ConfidenceBadge value={row.confidence} />
-                  </td>
-
-                  <td className="px-4 py-3">
-                    <div className="flex items-center justify-end gap-1.5 opacity-0 transition group-hover:opacity-100">
+                  <td style={{ padding:"10px 16px",fontSize:12,color:P.t4 }}>{row.label}</td>
+                  <td style={{ padding:"10px 16px",fontFamily:"monospace",fontSize:11,color:P.t5 }}>{row.year}</td>
+                  <td style={{ padding:"10px 16px" }}><ConfBadge v={row.confidence}/></td>
+                  <td style={{ padding:"10px 16px" }}>
+                    <div style={{ display:"flex",gap:4,justifyContent:"flex-end" }}>
                       {isEditing ? (
-                        <button
-                          onClick={() => saveEdit(row.id)}
-                          className="rounded px-2 py-1 text-xs font-medium text-teal-400 hover:bg-teal-500/10"
-                        >
-                          Save
-                        </button>
+                        <button onClick={()=>{setRows(p=>p.map(r=>r.id===row.id?{...r,...editData,verified:true,confidence:Math.max(r.confidence,0.95)}:r));setEditingId(null);}} style={{ padding:"3px 10px",borderRadius:4,fontSize:11,fontWeight:600,color:P.accent,border:"none",backgroundColor:"rgba(212,90,0,0.10)",cursor:"pointer" }}>Save</button>
                       ) : (
                         <>
-                          <button
-                            onClick={() => startEdit(row)}
-                            className="flex h-6 w-6 items-center justify-center rounded text-zinc-600 hover:bg-white/8 hover:text-zinc-300"
-                          >
-                            <Edit2 className="h-3 w-3" />
-                          </button>
-                          <button
-                            onClick={() => rerunOcr(row.id)}
-                            className="flex h-6 w-6 items-center justify-center rounded text-zinc-600 hover:bg-white/8 hover:text-zinc-300"
-                          >
-                            <RefreshCw className="h-3 w-3" />
-                          </button>
-                          <button
-                            onClick={() => removeRow(row.id)}
-                            className="flex h-6 w-6 items-center justify-center rounded text-zinc-600 hover:bg-red-500/10 hover:text-red-400"
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </button>
+                          <button onClick={()=>{setEditingId(row.id);setEditData({artist:row.artist,title:row.title});}} style={{ width:24,height:24,display:"flex",alignItems:"center",justifyContent:"center",borderRadius:4,border:"none",backgroundColor:"transparent",cursor:"pointer",color:P.t5 }}><Edit2 size={12}/></button>
+                          <button onClick={()=>setRows(p=>p.filter(r=>r.id!==row.id))} style={{ width:24,height:24,display:"flex",alignItems:"center",justifyContent:"center",borderRadius:4,border:"none",backgroundColor:"transparent",cursor:"pointer",color:"#DC2626" }}><Trash2 size={12}/></button>
                         </>
                       )}
                     </div>

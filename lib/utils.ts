@@ -5,25 +5,19 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function formatDuration(seconds: number): string {
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  return `${m}:${s.toString().padStart(2, "0")}`;
-}
-
 export function energyColor(energy: number): string {
-  if (energy <= 3) return "text-blue-400";
-  if (energy <= 5) return "text-teal-400";
-  if (energy <= 7) return "text-yellow-400";
-  if (energy <= 9) return "text-orange-400";
-  return "text-red-400";
+  if (energy <= 3) return "#3B82F6";
+  if (energy <= 5) return "#D45A00";
+  if (energy <= 7) return "#B84800";
+  if (energy <= 9) return "#EF4444";
+  return "#DC2626";
 }
 
 export function gemScoreColor(score: number): string {
-  if (score >= 90) return "text-teal-300";
-  if (score >= 75) return "text-teal-400";
-  if (score >= 60) return "text-yellow-400";
-  return "text-zinc-400";
+  if (score >= 90) return "#D45A00";
+  if (score >= 75) return "#B84800";
+  if (score >= 60) return "#D97706";
+  return "#7A7A84";
 }
 
 export function confidenceLabel(confidence: number): "high" | "medium" | "low" {

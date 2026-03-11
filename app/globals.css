@@ -1,30 +1,33 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-@theme {
-  --font-display: 'Space Grotesk', sans-serif;
-  --font-mono: 'JetBrains Mono', monospace;
-  --color-bg-base: #0E0E10;
-  --color-bg-panel: #15151B;
-  --color-accent-teal: #0D9488;
+:root {
+  --bg-base: #DCDCDF;
+  --bg-panel: #C8C8CC;
+  --bg-sidebar: #BCBCC0;
+  --accent: #D45A00;
+  --text-primary: #111112;
+  --text-secondary: #3A3A42;
+  --text-muted: #6E6E78;
+  --text-faint: #9A9AA4;
+  --border: rgba(0,0,0,0.10);
 }
 
 * { box-sizing: border-box; }
 
 body {
-  background-color: #0E0E10;
-  color: #d4d4d8;
+  background-color: var(--bg-base);
+  color: var(--text-primary);
+  font-family: 'Space Grotesk', sans-serif;
 }
 
 ::-webkit-scrollbar { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.10); border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.18); }
+::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.25); }
 
-.font-display { font-family: var(--font-display, 'Space Grotesk', sans-serif); }
-.font-mono { font-family: var(--font-mono, 'JetBrains Mono', monospace); }
+::selection { background: rgba(212,90,0,0.2); color: #111112; }
+:focus-visible { outline: 2px solid rgba(212,90,0,0.5); outline-offset: 2px; }
 
-::selection { background: rgba(13,148,136,0.3); color: #fff; }
-
-:focus-visible { outline: 2px solid rgba(13,148,136,0.6); outline-offset: 2px; }
-
-.glow-teal { box-shadow: 0 0 20px 0 rgba(13,148,136,0.2), 0 0 40px 0 rgba(13,148,136,0.1); }
+a { color: inherit; text-decoration: none; }

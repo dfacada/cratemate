@@ -1,76 +1,39 @@
 import RadarCards from "@/components/radar-cards";
-import { Radio, Zap, TrendingUp, Activity } from "lucide-react";
+import { Radio, Activity, TrendingUp } from "lucide-react";
 import { mockRadarTracks } from "@/data/mockCrate";
 
-const avgScore = Math.round(mockRadarTracks.reduce((a, t) => a + t.undergroundScore, 0) / mockRadarTracks.length);
-const totalSignals = mockRadarTracks.reduce((a, t) => a + t.signalCount, 0);
+const P = { panel:"#C8C8CC", border:"rgba(0,0,0,0.09)", t1:"#111112", t4:"#7A7A84", t5:"#9A9AA4", accent:"#D45A00" };
+const avg = Math.round(mockRadarTracks.reduce((a,t)=>a+t.undergroundScore,0)/mockRadarTracks.length);
+const total = mockRadarTracks.reduce((a,t)=>a+t.signalCount,0);
 
 export default function RadarPage() {
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-start justify-between">
+    <div style={{ display:"flex",flexDirection:"column",gap:20 }}>
+      <div style={{ display:"flex",alignItems:"flex-start",justifyContent:"space-between" }}>
         <div>
-          <h1 className="font-display text-2xl font-semibold text-white">Underground Radar</h1>
-          <p className="mt-1 text-sm text-zinc-500">
-            Real-time signal detection across SoundCloud, Bandcamp, and DJ charts
-          </p>
+          <h1 style={{ fontSize:22,fontWeight:700,color:P.t1,margin:0 }}>Underground Radar</h1>
+          <p style={{ fontSize:13,color:P.t4,marginTop:4 }}>Real-time signal detection across SoundCloud, Bandcamp, and DJ charts</p>
         </div>
-        <div className="flex items-center gap-1.5 rounded-full border border-teal-500/30 bg-teal-500/10 px-3 py-1.5 text-xs font-medium text-teal-400">
-          <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-teal-400" />
-          Live
-        </div>
+        <span style={{ display:"flex",alignItems:"center",gap:6,padding:"6px 14px",borderRadius:999,border:"1px solid rgba(212,90,0,0.25)",backgroundColor:"rgba(212,90,0,0.08)",fontSize:12,fontWeight:600,color:P.accent }}>
+          <span style={{ width:6,height:6,borderRadius:"50%",backgroundColor:P.accent }}/>Live
+        </span>
       </div>
-
-      {/* Signal stats */}
-      <div className="grid grid-cols-3 gap-3">
-        <div className="rounded-xl border border-white/8 bg-[#15151B] p-4 flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-500/10">
-            <Radio className="h-4 w-4 text-teal-400" />
-          </div>
-          <div>
-            <p className="font-display text-xl font-bold text-white">{mockRadarTracks.length}</p>
-            <p className="text-xs text-zinc-500">Tracks on radar</p>
-          </div>
-        </div>
-        <div className="rounded-xl border border-white/8 bg-[#15151B] p-4 flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-orange-500/10">
-            <Activity className="h-4 w-4 text-orange-400" />
-          </div>
-          <div>
-            <p className="font-display text-xl font-bold text-white">{totalSignals.toLocaleString()}</p>
-            <p className="text-xs text-zinc-500">Total signals</p>
-          </div>
-        </div>
-        <div className="rounded-xl border border-white/8 bg-[#15151B] p-4 flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-500/10">
-            <TrendingUp className="h-4 w-4 text-purple-400" />
-          </div>
-          <div>
-            <p className="font-display text-xl font-bold text-white">{avgScore}</p>
-            <p className="text-xs text-zinc-500">Avg underground score</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Score legend */}
-      <div className="flex items-center gap-4 rounded-xl border border-white/8 bg-[#15151B] px-4 py-3">
-        <span className="text-xs font-medium text-zinc-500">Score guide:</span>
+      <div style={{ display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12 }}>
         {[
-          { range: "90–100", label: "Explosive", color: "text-teal-300" },
-          { range: "75–89", label: "Strong signal", color: "text-teal-400" },
-          { range: "60–74", label: "Emerging", color: "text-yellow-400" },
-          { range: "<60", label: "Early watch", color: "text-zinc-500" },
-        ].map(({ range, label, color }) => (
-          <div key={range} className="flex items-center gap-1.5">
-            <Zap className={`h-3 w-3 ${color}`} />
-            <span className={`text-xs ${color}`}>{range}</span>
-            <span className="text-xs text-zinc-700">· {label}</span>
+          {icon:Radio,label:"Tracks on radar",value:mockRadarTracks.length,color:"#D45A00",bg:"rgba(212,90,0,0.10)"},
+          {icon:Activity,label:"Total signals",value:total.toLocaleString(),color:"#D97706",bg:"rgba(217,119,6,0.10)"},
+          {icon:TrendingUp,label:"Avg underground score",value:avg,color:"#7C3AED",bg:"rgba(124,58,237,0.10)"},
+        ].map(({icon:Icon,label,value,color,bg})=>(
+          <div key={label} style={{ display:"flex",alignItems:"center",gap:12,borderRadius:12,border:`1px solid ${P.border}`,backgroundColor:P.panel,padding:16 }}>
+            <div style={{ width:32,height:32,borderRadius:8,backgroundColor:bg,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0 }}><Icon size={15} style={{ color }}/></div>
+            <div>
+              <p style={{ fontSize:22,fontWeight:700,color:P.t1,margin:0 }}>{value}</p>
+              <p style={{ fontSize:11,color:P.t5,marginTop:2 }}>{label}</p>
+            </div>
           </div>
         ))}
       </div>
-
-      <RadarCards />
+      <RadarCards/>
     </div>
   );
 }

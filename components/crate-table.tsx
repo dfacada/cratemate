@@ -1,176 +1,104 @@
 "use client";
-
 import { useState } from "react";
-import { Trash2, Download, ListMusic, ArrowUpDown, Music2 } from "lucide-react";
-import { cn, energyColor, gemScoreColor } from "@/lib/utils";
+import { Trash2, Download, ListMusic, ArrowUpDown } from "lucide-react";
+import { gemScoreColor, energyColor } from "@/lib/utils";
 import { mockTracks } from "@/data/mockTracks";
 import { Track } from "@/types/track";
 
-const KEY_COLORS: Record<string, string> = {
-  "1A": "#FF6B6B", "2A": "#FF8E53", "3A": "#FFC300", "4A": "#C5E336",
-  "5A": "#6BCB77", "6A": "#4D96FF", "7A": "#9B72CF", "8A": "#FF6B9D",
-  "9A": "#56CFE1", "10A": "#FF9A3C", "11A": "#80F2A6", "12A": "#FFD6A5",
-  "1B": "#FF4040", "2B": "#FF6B2B", "3B": "#FFA500", "4B": "#A8E063",
-  "5B": "#2ECC40", "6B": "#0074D9", "7B": "#7B2FBE", "8B": "#FF2D6C",
-  "9B": "#17B8D1", "10B": "#E07B00", "11B": "#4ADE80", "12B": "#FCC89B",
+const P = { panel:"#C8C8CC", border:"rgba(0,0,0,0.09)", t1:"#111112", t2:"#3A3A42", t3:"#5A5A64", t4:"#7A7A84", t5:"#9A9AA4", accent:"#D45A00" };
+
+const KEY_COLORS: Record<string,string> = {
+  "1A":"#E85555","2A":"#E87A3A","3A":"#D4A017","4A":"#8DB33A","5A":"#3DAD5E","6A":"#2D7DD2","7A":"#7B52C7","8A":"#D44D8A","9A":"#2AADCC","10A":"#D47A1A","11A":"#3DC47A","12A":"#C4A060",
+  "1B":"#D43030","2B":"#CC5520","3B":"#D48A00","4B":"#72A030","5B":"#208840","6B":"#0060C0","7B":"#5E28AA","8B":"#CC1855","9B":"#1090B8","10B":"#B86800","11B":"#28B85C","12B":"#B08040",
 };
 
-interface CrateTableProps {
-  tracks?: Track[];
-  onBuildSet?: () => void;
-  onExport?: () => void;
-}
+type SortKey = "artist"|"bpm"|"energy"|"year";
 
-type SortKey = "artist" | "bpm" | "key" | "energy" | "year";
-
-export default function CrateTable({ tracks = mockTracks.slice(0, 8), onBuildSet, onExport }: CrateTableProps) {
+export default function CrateTable({ tracks = mockTracks.slice(0,8), onBuildSet, onExport }: { tracks?: Track[]; onBuildSet?: ()=>void; onExport?: ()=>void }) {
   const [items, setItems] = useState<Track[]>(tracks);
-  const [sortKey, setSortKey] = useState<SortKey | null>(null);
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const [sortKey, setSortKey] = useState<SortKey|null>(null);
+  const [sortDir, setSortDir] = useState<"asc"|"desc">("asc");
 
-  const toggleSort = (key: SortKey) => {
-    if (sortKey === key) {
-      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    } else {
-      setSortKey(key);
-      setSortDir("asc");
-    }
+  const toggleSort = (k: SortKey) => {
+    if (sortKey===k) setSortDir(d => d==="asc"?"desc":"asc");
+    else { setSortKey(k); setSortDir("asc"); }
   };
 
-  const sorted = [...items].sort((a, b) => {
+  const sorted = [...items].sort((a,b) => {
     if (!sortKey) return 0;
-    const aVal = a[sortKey as keyof Track];
-    const bVal = b[sortKey as keyof Track];
-    if (typeof aVal === "number" && typeof bVal === "number") {
-      return sortDir === "asc" ? aVal - bVal : bVal - aVal;
-    }
-    const aStr = String(aVal ?? "");
-    const bStr = String(bVal ?? "");
-    return sortDir === "asc" ? aStr.localeCompare(bStr) : bStr.localeCompare(aStr);
+    const av = a[sortKey as keyof Track] as number|string;
+    const bv = b[sortKey as keyof Track] as number|string;
+    if (typeof av==="number"&&typeof bv==="number") return sortDir==="asc"?av-bv:bv-av;
+    return sortDir==="asc"?String(av).localeCompare(String(bv)):String(bv).localeCompare(String(av));
   });
 
-  const removeTrack = (id: string) => setItems((prev) => prev.filter((t) => t.id !== id));
+  const avgBpm = Math.round(items.reduce((a,t)=>a+t.bpm,0)/items.length);
 
-  const avgBpm = Math.round(items.reduce((a, t) => a + t.bpm, 0) / items.length);
-  const avgEnergy = (items.reduce((a, t) => a + t.energy, 0) / items.length).toFixed(1);
-
-  const SortableHeader = ({ label, sortBy }: { label: string; sortBy: SortKey }) => (
-    <th
-      className="cursor-pointer px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-widest text-zinc-600 hover:text-zinc-400"
-      onClick={() => toggleSort(sortBy)}
-    >
-      <div className="flex items-center gap-1">
-        {label}
-        <ArrowUpDown className="h-2.5 w-2.5" />
-      </div>
+  const Th = ({ label, sk }: { label:string; sk?: SortKey }) => (
+    <th onClick={()=>sk&&toggleSort(sk)} style={{ padding:"10px 16px",textAlign:"left",fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em",color:P.t5,cursor:sk?"pointer":"default",whiteSpace:"nowrap",borderBottom:`1px solid ${P.border}`,backgroundColor:P.panel }}>
+      <span style={{ display:"flex",alignItems:"center",gap:4 }}>{label}{sk&&<ArrowUpDown size={10}/>}</span>
     </th>
   );
 
   return (
-    <div className="space-y-4">
-      {/* Crate stats + actions */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4 text-xs text-zinc-500">
-          <span className="flex items-center gap-1.5">
-            <Music2 className="h-3.5 w-3.5 text-teal-400" />
-            <span className="font-semibold text-zinc-300">{items.length}</span> tracks
-          </span>
-          <span>Avg BPM: <span className="font-mono text-zinc-300">{avgBpm}</span></span>
-          <span>Avg Energy: <span className={cn("font-mono", energyColor(parseFloat(avgEnergy)))}>{avgEnergy}</span></span>
-        </div>
-        <div className="flex gap-2">
-          <button
-            onClick={onExport}
-            className="flex items-center gap-1.5 rounded-md border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-zinc-400 transition hover:bg-white/10 hover:text-white"
-          >
-            <Download className="h-3.5 w-3.5" />
-            Export Playlist
+    <div style={{ display:"flex",flexDirection:"column",gap:12 }}>
+      <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between" }}>
+        <p style={{ fontSize:13,color:P.t4 }}><strong style={{ color:P.t1 }}>{items.length}</strong> tracks &nbsp;·&nbsp; Avg BPM: <strong style={{ color:P.t1,fontFamily:"monospace" }}>{avgBpm}</strong></p>
+        <div style={{ display:"flex",gap:8 }}>
+          <button onClick={onExport} style={{ display:"flex",alignItems:"center",gap:6,padding:"6px 12px",borderRadius:6,border:`1px solid ${P.border}`,backgroundColor:"rgba(0,0,0,0.05)",fontSize:12,color:P.t3,cursor:"pointer" }}>
+            <Download size={13}/> Export
           </button>
-          <button
-            onClick={onBuildSet}
-            className="flex items-center gap-1.5 rounded-md bg-teal-500/20 px-3 py-1.5 text-xs font-medium text-teal-300 ring-1 ring-teal-500/30 transition hover:bg-teal-500/30"
-          >
-            <ListMusic className="h-3.5 w-3.5" />
-            Build Set
+          <button onClick={onBuildSet} style={{ display:"flex",alignItems:"center",gap:6,padding:"6px 12px",borderRadius:6,backgroundColor:"rgba(212,90,0,0.12)",border:"1px solid rgba(212,90,0,0.22)",fontSize:12,fontWeight:600,color:P.accent,cursor:"pointer" }}>
+            <ListMusic size={13}/> Build Set
           </button>
         </div>
       </div>
 
-      {/* Table */}
-      <div className="overflow-hidden rounded-xl border border-white/8 bg-[#15151B]">
-        <table className="w-full text-sm">
+      <div style={{ borderRadius:12,border:`1px solid ${P.border}`,overflow:"hidden" }}>
+        <table style={{ width:"100%",borderCollapse:"collapse" }}>
           <thead>
-            <tr className="border-b border-white/6">
-              <th className="w-8 px-4 py-3" />
-              <SortableHeader label="Artist" sortBy="artist" />
-              <th className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-widest text-zinc-600">Track</th>
-              <SortableHeader label="BPM" sortBy="bpm" />
-              <th className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-widest text-zinc-600">Key</th>
-              <SortableHeader label="Energy" sortBy="energy" />
-              <th className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-widest text-zinc-600">Source</th>
-              <th className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-widest text-zinc-600">Gem</th>
-              <th className="px-4 py-3" />
+            <tr>
+              <th style={{ width:32,padding:"10px 16px",borderBottom:`1px solid ${P.border}`,backgroundColor:P.panel }}/>
+              <Th label="Artist" sk="artist"/>
+              <Th label="Track"/>
+              <Th label="BPM" sk="bpm"/>
+              <Th label="Key"/>
+              <Th label="Energy" sk="energy"/>
+              <Th label="Source"/>
+              <Th label="Gem"/>
+              <th style={{ padding:"10px 16px",borderBottom:`1px solid ${P.border}`,backgroundColor:P.panel }}/>
             </tr>
           </thead>
-          <tbody className="divide-y divide-white/4">
-            {sorted.map((track, i) => (
-              <tr key={track.id} className="group transition hover:bg-white/2">
-                <td className="px-4 py-3 font-mono text-xs text-zinc-700">{i + 1}</td>
-                <td className="px-4 py-3 font-medium text-zinc-200">{track.artist}</td>
-                <td className="px-4 py-3">
-                  <div>
-                    <span className="text-zinc-300">{track.title}</span>
-                    <span className="ml-2 text-xs text-zinc-600">{track.duration}</span>
-                  </div>
+          <tbody>
+            {sorted.map((t,i) => (
+              <tr key={t.id} style={{ backgroundColor:i%2===0?P.panel:"rgba(0,0,0,0.025)",borderBottom:`1px solid ${P.border}` }}>
+                <td style={{ padding:"10px 16px",fontFamily:"monospace",fontSize:11,color:P.t5 }}>{i+1}</td>
+                <td style={{ padding:"10px 16px",fontSize:13,fontWeight:600,color:P.t1 }}>{t.artist}</td>
+                <td style={{ padding:"10px 16px" }}>
+                  <span style={{ fontSize:13,color:P.t2 }}>{t.title}</span>
+                  <span style={{ fontSize:11,color:P.t5,marginLeft:6 }}>{t.duration}</span>
                 </td>
-                <td className="px-4 py-3 font-mono text-xs text-zinc-400">{track.bpm}</td>
-                <td className="px-4 py-3">
-                  <span
-                    className="rounded px-1.5 py-0.5 font-mono text-[10px] font-semibold"
-                    style={{
-                      color: KEY_COLORS[track.key] ?? "#888",
-                      backgroundColor: (KEY_COLORS[track.key] ?? "#888") + "18",
-                    }}
-                  >
-                    {track.key}
-                  </span>
+                <td style={{ padding:"10px 16px",fontFamily:"monospace",fontSize:12,color:P.t3 }}>{t.bpm}</td>
+                <td style={{ padding:"10px 16px" }}>
+                  <span style={{ padding:"2px 6px",borderRadius:4,fontFamily:"monospace",fontSize:10,fontWeight:700,color:KEY_COLORS[t.key]??"#888",backgroundColor:`${KEY_COLORS[t.key]??'#888'}18` }}>{t.key}</span>
                 </td>
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-1.5">
-                    <div className="flex gap-0.5">
-                      {Array.from({ length: 10 }).map((_, j) => (
-                        <div
-                          key={j}
-                          className={cn(
-                            "h-2.5 w-1 rounded-sm",
-                            j < track.energy ? "bg-teal-500" : "bg-white/8"
-                          )}
-                        />
+                <td style={{ padding:"10px 16px" }}>
+                  <div style={{ display:"flex",alignItems:"center",gap:4 }}>
+                    <div style={{ display:"flex",gap:1 }}>
+                      {Array.from({length:10}).map((_,j) => (
+                        <div key={j} style={{ width:3,height:10,borderRadius:1,backgroundColor:j<t.energy?energyColor(t.energy):"rgba(0,0,0,0.10)" }}/>
                       ))}
                     </div>
-                    <span className={cn("font-mono text-xs", energyColor(track.energy))}>
-                      {track.energy}
-                    </span>
+                    <span style={{ fontSize:11,fontFamily:"monospace",color:energyColor(t.energy) }}>{t.energy}</span>
                   </div>
                 </td>
-                <td className="px-4 py-3">
-                  <span className="rounded-full bg-white/6 px-2 py-0.5 text-[9px] uppercase tracking-wide text-zinc-500">
-                    {track.source.replace(/_/g, " ")}
-                  </span>
+                <td style={{ padding:"10px 16px" }}>
+                  <span style={{ fontSize:10,padding:"2px 8px",borderRadius:999,backgroundColor:"rgba(0,0,0,0.07)",color:P.t4,textTransform:"uppercase",letterSpacing:"0.04em" }}>{t.source.replace(/_/g," ")}</span>
                 </td>
-                <td className="px-4 py-3">
-                  {track.gemScore !== undefined && (
-                    <span className={cn("font-mono text-xs font-medium", gemScoreColor(track.gemScore))}>
-                      {track.gemScore}
-                    </span>
-                  )}
-                </td>
-                <td className="px-4 py-3">
-                  <button
-                    onClick={() => removeTrack(track.id)}
-                    className="flex h-6 w-6 items-center justify-center rounded text-zinc-700 opacity-0 transition group-hover:opacity-100 hover:bg-red-500/10 hover:text-red-400"
-                  >
-                    <Trash2 className="h-3 w-3" />
+                <td style={{ padding:"10px 16px",fontFamily:"monospace",fontSize:12,fontWeight:700,color:gemScoreColor(t.gemScore??0) }}>{t.gemScore}</td>
+                <td style={{ padding:"10px 16px" }}>
+                  <button onClick={()=>setItems(p=>p.filter(x=>x.id!==t.id))} style={{ width:24,height:24,borderRadius:4,border:"none",backgroundColor:"transparent",cursor:"pointer",color:P.t5,display:"flex",alignItems:"center",justifyContent:"center" }}>
+                    <Trash2 size={12}/>
                   </button>
                 </td>
               </tr>

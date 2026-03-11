@@ -1,91 +1,53 @@
 "use client";
-
 import { useState } from "react";
 import { Plus, Archive } from "lucide-react";
-import { cn } from "@/lib/utils";
 import CrateTable from "@/components/crate-table";
 import { mockCrates } from "@/data/mockCrate";
 import { Crate } from "@/types/crate";
 
-export default function CratePage() {
-  const [selectedCrateId, setSelectedCrateId] = useState(mockCrates[0].id);
-  const selectedCrate = mockCrates.find((c) => c.id === selectedCrateId) as Crate;
+const P = { panel:"#C8C8CC", panel2:"#BCBCC0", border:"rgba(0,0,0,0.09)", t1:"#111112", t2:"#3A3A42", t4:"#7A7A84", t5:"#9A9AA4", accent:"#D45A00" };
 
+export default function CratePage() {
+  const [selectedId, setSelectedId] = useState(mockCrates[0].id);
+  const crate = mockCrates.find(c=>c.id===selectedId) as Crate;
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <div style={{ display:"flex",flexDirection:"column",gap:20 }}>
+      <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between" }}>
         <div>
-          <h1 className="font-display text-2xl font-semibold text-white">Crates</h1>
-          <p className="mt-1 text-sm text-zinc-500">
-            {mockCrates.length} crates · {mockCrates.reduce((a, c) => a + c.trackIds.length, 0)} total tracks
-          </p>
+          <h1 style={{ fontSize:22,fontWeight:700,color:P.t1,margin:0 }}>Crates</h1>
+          <p style={{ fontSize:13,color:P.t4,marginTop:4 }}>{mockCrates.length} crates · {mockCrates.reduce((a,c)=>a+c.trackIds.length,0)} total tracks</p>
         </div>
-        <button className="flex items-center gap-2 rounded-lg bg-teal-500/20 px-4 py-2 text-sm font-medium text-teal-300 ring-1 ring-teal-500/30 transition hover:bg-teal-500/30">
-          <Plus className="h-4 w-4" />
-          New Crate
+        <button style={{ display:"flex",alignItems:"center",gap:6,padding:"8px 16px",borderRadius:8,backgroundColor:"rgba(212,90,0,0.10)",border:"1px solid rgba(212,90,0,0.20)",fontSize:13,fontWeight:600,color:P.accent,cursor:"pointer" }}>
+          <Plus size={14}/> New Crate
         </button>
       </div>
-
-      <div className="grid gap-4 lg:grid-cols-4">
-        {/* Crate list sidebar */}
-        <div className="lg:col-span-1 space-y-2">
-          {mockCrates.map((crate) => (
-            <button
-              key={crate.id}
-              onClick={() => setSelectedCrateId(crate.id)}
-              className={cn(
-                "flex w-full items-start gap-3 rounded-xl border p-3.5 text-left transition",
-                selectedCrateId === crate.id
-                  ? "border-white/15 bg-white/6"
-                  : "border-white/6 bg-[#15151B] hover:border-white/10 hover:bg-white/4"
-              )}
-            >
-              <div
-                className="mt-0.5 h-3 w-3 shrink-0 rounded-full"
-                style={{ backgroundColor: crate.color }}
-              />
-              <div className="min-w-0">
-                <p className="truncate text-sm font-medium text-zinc-200">{crate.name}</p>
-                <p className="text-xs text-zinc-600">
-                  {crate.trackIds.length} tracks · {crate.avgBpm} BPM
-                </p>
-                <div className="mt-1.5 flex flex-wrap gap-1">
-                  {(crate.tags ?? []).slice(0, 2).map((tag) => (
-                    <span key={tag} className="rounded-full bg-white/6 px-1.5 py-0.5 text-[9px] text-zinc-600">
-                      {tag}
-                    </span>
-                  ))}
+      <div style={{ display:"grid",gridTemplateColumns:"220px 1fr",gap:16 }}>
+        <div style={{ display:"flex",flexDirection:"column",gap:8 }}>
+          {mockCrates.map(c=>(
+            <button key={c.id} onClick={()=>setSelectedId(c.id)} style={{ display:"flex",alignItems:"flex-start",gap:10,padding:14,borderRadius:10,border:`1px solid ${selectedId===c.id?"rgba(0,0,0,0.15)":P.border}`,backgroundColor:selectedId===c.id?P.panel2:P.panel,cursor:"pointer",textAlign:"left",transition:"all 0.15s" }}>
+              <div style={{ width:10,height:10,borderRadius:"50%",backgroundColor:c.color,flexShrink:0,marginTop:2 }}/>
+              <div style={{ minWidth:0 }}>
+                <p style={{ fontSize:13,fontWeight:600,color:P.t1,margin:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>{c.name}</p>
+                <p style={{ fontSize:11,color:P.t5,marginTop:2 }}>{c.trackIds.length} tracks · {c.avgBpm} BPM</p>
+                <div style={{ display:"flex",flexWrap:"wrap",gap:4,marginTop:6 }}>
+                  {(c.tags??[]).slice(0,2).map(t=><span key={t} style={{ fontSize:9,padding:"1px 6px",borderRadius:999,backgroundColor:"rgba(0,0,0,0.07)",color:P.t4 }}>{t}</span>)}
                 </div>
               </div>
             </button>
           ))}
         </div>
-
-        {/* Crate content */}
-        <div className="lg:col-span-3">
-          {selectedCrate && (
-            <div className="space-y-4">
-              {/* Crate header */}
-              <div
-                className="flex items-center gap-3 rounded-xl border p-4"
-                style={{ background: `${selectedCrate.color}10`, borderColor: `${selectedCrate.color}30` }}
-              >
-                <Archive className="h-5 w-5 shrink-0" style={{ color: selectedCrate.color }} />
+        <div style={{ display:"flex",flexDirection:"column",gap:12 }}>
+          {crate && (
+            <>
+              <div style={{ display:"flex",alignItems:"center",gap:10,padding:16,borderRadius:12,backgroundColor:`${crate.color}12`,border:`1px solid ${crate.color}30` }}>
+                <Archive size={18} style={{ color:crate.color,flexShrink:0 }}/>
                 <div>
-                  <h2 className="font-display text-lg font-semibold text-white">{selectedCrate.name}</h2>
-                  {selectedCrate.description && (
-                    <p className="text-sm text-zinc-400">{selectedCrate.description}</p>
-                  )}
+                  <h2 style={{ fontSize:16,fontWeight:700,color:P.t1,margin:0 }}>{crate.name}</h2>
+                  {crate.description&&<p style={{ fontSize:12,color:P.t4,marginTop:2 }}>{crate.description}</p>}
                 </div>
               </div>
-
-              <CrateTable
-                tracks={selectedCrate.tracks}
-                onBuildSet={() => window.location.assign("/set-builder")}
-                onExport={() => {}}
-              />
-            </div>
+              <CrateTable tracks={crate.tracks} onBuildSet={()=>window.location.assign("/set-builder")} onExport={()=>{}}/>
+            </>
           )}
         </div>
       </div>

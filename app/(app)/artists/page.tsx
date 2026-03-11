@@ -2,66 +2,39 @@ import ArtistMiner from "@/components/artist-miner";
 import { mockArtists } from "@/data/mockArtists";
 import { Users, MapPin, Disc3 } from "lucide-react";
 
+const P = { panel:"#C8C8CC", border:"rgba(0,0,0,0.09)", t1:"#111112", t4:"#7A7A84", t5:"#9A9AA4", accent:"#D45A00" };
+
 export default function ArtistsPage() {
   return (
-    <div className="space-y-6">
+    <div style={{ display:"flex",flexDirection:"column",gap:20 }}>
       <div>
-        <h1 className="font-display text-2xl font-semibold text-white">Artists</h1>
-        <p className="mt-1 text-sm text-zinc-500">
-          Browse and mine artist catalogs oldest → newest
-        </p>
+        <h1 style={{ fontSize:22,fontWeight:700,color:P.t1,margin:0 }}>Artists</h1>
+        <p style={{ fontSize:13,color:P.t4,marginTop:4 }}>Browse and mine artist catalogs oldest → newest</p>
       </div>
-
-      {/* Artist grid */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
-        {mockArtists.map((artist) => (
-          <div
-            key={artist.id}
-            className="group rounded-xl border border-white/8 bg-[#15151B] p-4 transition hover:border-white/15 hover:bg-white/2"
-          >
-            {/* Avatar placeholder */}
-            <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-teal-500/20 to-teal-700/10 ring-1 ring-teal-500/20">
-              <span className="font-display text-xs font-bold text-teal-400">
-                {artist.name.slice(0, 2).toUpperCase()}
-              </span>
+      <div style={{ display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12 }}>
+        {mockArtists.map(a=>(
+          <div key={a.id} style={{ borderRadius:12,border:`1px solid ${P.border}`,backgroundColor:P.panel,padding:16 }}>
+            <div style={{ width:40,height:40,borderRadius:"50%",background:"linear-gradient(135deg,rgba(212,90,0,0.15),rgba(212,90,0,0.05))",border:"1px solid rgba(212,90,0,0.20)",display:"flex",alignItems:"center",justifyContent:"center",marginBottom:12 }}>
+              <span style={{ fontSize:12,fontWeight:700,color:P.accent }}>{a.name.slice(0,2).toUpperCase()}</span>
             </div>
-            <h3 className="font-display text-sm font-semibold text-white">{artist.name}</h3>
-            <div className="mt-1 flex items-center gap-1 text-xs text-zinc-600">
-              <MapPin className="h-3 w-3" />
-              <span>{artist.origin}</span>
+            <h3 style={{ fontSize:14,fontWeight:700,color:P.t1,margin:0 }}>{a.name}</h3>
+            <div style={{ display:"flex",alignItems:"center",gap:4,fontSize:11,color:P.t5,marginTop:4 }}><MapPin size={11}/>{a.origin}</div>
+            <div style={{ display:"flex",justifyContent:"space-between",marginTop:12 }}>
+              <span style={{ display:"flex",alignItems:"center",gap:4,fontSize:12,color:P.t4 }}><Disc3 size={12}/>{a.trackCount} tracks</span>
+              <span style={{ fontSize:12,fontWeight:700,color:P.accent }}>{a.gemTracks} gems</span>
             </div>
-            <div className="mt-3 flex items-center justify-between text-xs">
-              <div className="flex items-center gap-1 text-zinc-500">
-                <Disc3 className="h-3 w-3" />
-                <span>{artist.trackCount} tracks</span>
-              </div>
-              <span className="text-teal-400">{artist.gemTracks} gems</span>
-            </div>
-            <div className="mt-2.5 flex flex-wrap gap-1">
-              {artist.genres.slice(0, 2).map((g) => (
-                <span key={g} className="rounded-full bg-white/6 px-2 py-0.5 text-[9px] text-zinc-500">
-                  {g}
-                </span>
-              ))}
-            </div>
-            <div className="mt-2.5 flex flex-wrap gap-1">
-              {artist.labels.slice(0, 2).map((l) => (
-                <span key={l} className="rounded-full bg-teal-500/8 px-2 py-0.5 text-[9px] text-teal-600">
-                  {l}
-                </span>
-              ))}
+            <div style={{ display:"flex",flexWrap:"wrap",gap:4,marginTop:10 }}>
+              {a.genres.slice(0,2).map(g=><span key={g} style={{ fontSize:9,padding:"2px 7px",borderRadius:999,backgroundColor:"rgba(0,0,0,0.07)",color:P.t4 }}>{g}</span>)}
+              {a.labels.slice(0,1).map(l=><span key={l} style={{ fontSize:9,padding:"2px 7px",borderRadius:999,backgroundColor:"rgba(212,90,0,0.08)",color:P.accent }}>{l}</span>)}
             </div>
           </div>
         ))}
       </div>
-
-      {/* Miner */}
-      <div className="rounded-xl border border-white/8 bg-[#15151B] p-5">
-        <h2 className="mb-4 text-sm font-semibold text-white flex items-center gap-2">
-          <Users className="h-4 w-4 text-teal-400" />
-          Artist Catalog Miner
+      <div style={{ borderRadius:12,border:`1px solid ${P.border}`,backgroundColor:P.panel,padding:20 }}>
+        <h2 style={{ display:"flex",alignItems:"center",gap:8,fontSize:14,fontWeight:700,color:P.t1,marginBottom:16 }}>
+          <Users size={15} style={{ color:P.accent }}/>Artist Catalog Miner
         </h2>
-        <ArtistMiner />
+        <ArtistMiner/>
       </div>
     </div>
   );

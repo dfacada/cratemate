@@ -1,158 +1,63 @@
 "use client";
-
 import { useState, useRef, useCallback, DragEvent, ChangeEvent } from "react";
 import { Upload, Clipboard, Image, X, Loader2, CheckCircle } from "lucide-react";
-import { cn } from "@/lib/utils";
 
-interface ScreenshotUploadProps {
-  onUpload: (file: File) => void;
-  processing?: boolean;
-  className?: string;
-}
+const P = { panel:"#C8C8CC", border:"rgba(0,0,0,0.09)", t1:"#111112", t3:"#5A5A64", t4:"#7A7A84", t5:"#9A9AA4", accent:"#D45A00" };
 
-export default function ScreenshotUpload({
-  onUpload,
-  processing = false,
-  className,
-}: ScreenshotUploadProps) {
-  const [isDragging, setIsDragging] = useState(false);
-  const [preview, setPreview] = useState<string | null>(null);
-  const [fileName, setFileName] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+export default function ScreenshotUpload({ onUpload, processing=false }: { onUpload:(f:File)=>void; processing?:boolean }) {
+  const [dragging, setDragging] = useState(false);
+  const [preview, setPreview] = useState<string|null>(null);
+  const [fileName, setFileName] = useState<string|null>(null);
+  const ref = useRef<HTMLInputElement>(null);
 
-  const handleFile = useCallback(
-    (file: File) => {
-      if (!file.type.startsWith("image/")) return;
-      setFileName(file.name);
-      const reader = new FileReader();
-      reader.onload = (e) => setPreview(e.target?.result as string);
-      reader.readAsDataURL(file);
-      onUpload(file);
-    },
-    [onUpload]
-  );
+  const handleFile = useCallback((file: File) => {
+    if (!file.type.startsWith("image/")) return;
+    setFileName(file.name);
+    const reader = new FileReader();
+    reader.onload = e => setPreview(e.target?.result as string);
+    reader.readAsDataURL(file);
+    onUpload(file);
+  }, [onUpload]);
 
-  const handleDrop = (e: DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setIsDragging(false);
-    const file = e.dataTransfer.files[0];
-    if (file) handleFile(file);
-  };
+  const handleDrop = (e: DragEvent<HTMLDivElement>) => { e.preventDefault(); setDragging(false); const f=e.dataTransfer.files[0]; if(f) handleFile(f); };
+  const handleChange = (e: ChangeEvent<HTMLInputElement>) => { const f=e.target.files?.[0]; if(f) handleFile(f); };
 
-  const handlePaste = useCallback(async () => {
-    try {
-      const items = await navigator.clipboard.read();
-      for (const item of items) {
-        for (const type of item.types) {
-          if (type.startsWith("image/")) {
-            const blob = await item.getType(type);
-            const file = new File([blob], "paste.png", { type });
-            handleFile(file);
-          }
-        }
-      }
-    } catch {
-      // Paste failed (permissions or non-image clipboard content)
-    }
-  }, [handleFile]);
-
-  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) handleFile(file);
-  };
-
-  const clearUpload = () => {
-    setPreview(null);
-    setFileName(null);
-    if (fileInputRef.current) fileInputRef.current.value = "";
+  const dzStyle: React.CSSProperties = {
+    minHeight:192,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",borderRadius:12,border:`2px dashed ${dragging?"#D45A00":"rgba(0,0,0,0.12)"}`,backgroundColor:dragging?"rgba(212,90,0,0.05)":preview?"rgba(0,0,0,0.03)":"rgba(0,0,0,0.03)",transition:"all 0.2s",position:"relative",overflow:"hidden",cursor:"pointer"
   };
 
   return (
-    <div className={cn("space-y-3", className)}>
-      {/* Drop zone */}
-      <div
-        onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-        onDragLeave={() => setIsDragging(false)}
-        onDrop={handleDrop}
-        className={cn(
-          "relative flex min-h-48 flex-col items-center justify-center rounded-xl border-2 border-dashed transition-all duration-200",
-          isDragging
-            ? "border-teal-400/60 bg-teal-500/5 shadow-[0_0_24px_0_rgba(20,184,166,0.12)]"
-            : preview
-            ? "border-teal-500/30 bg-[#15151B]"
-            : "border-white/10 bg-[#15151B] hover:border-white/20 hover:bg-white/3"
-        )}
-      >
+    <div style={{ display:"flex",flexDirection:"column",gap:10 }}>
+      <div style={dzStyle} onDragOver={e=>{e.preventDefault();setDragging(true);}} onDragLeave={()=>setDragging(false)} onDrop={handleDrop} onClick={()=>!preview&&ref.current?.click()}>
         {processing ? (
-          <div className="flex flex-col items-center gap-3 text-center">
-            <Loader2 className="h-8 w-8 animate-spin text-teal-400" />
-            <div>
-              <p className="text-sm font-medium text-zinc-300">Running OCR…</p>
-              <p className="text-xs text-zinc-600">Extracting track data from your screenshot</p>
-            </div>
+          <div style={{ display:"flex",flexDirection:"column",alignItems:"center",gap:10 }}>
+            <Loader2 size={28} style={{ color:P.accent, animation:"spin 1s linear infinite" }}/>
+            <p style={{ fontSize:13,fontWeight:600,color:P.t1 }}>Running OCR…</p>
+            <p style={{ fontSize:11,color:P.t5 }}>Extracting track data from your screenshot</p>
           </div>
         ) : preview ? (
-          <div className="relative w-full p-4">
-            <img
-              src={preview}
-              alt="Preview"
-              className="mx-auto max-h-40 rounded-lg object-contain opacity-80"
-            />
-            <div className="mt-2 flex items-center justify-center gap-2 text-xs text-zinc-500">
-              <CheckCircle className="h-3.5 w-3.5 text-teal-400" />
-              <span>{fileName}</span>
+          <div style={{ width:"100%",padding:16,position:"relative" }}>
+            <img src={preview} alt="Preview" style={{ maxHeight:160,margin:"0 auto",display:"block",borderRadius:8,objectFit:"contain",opacity:0.85 }}/>
+            <div style={{ display:"flex",alignItems:"center",justifyContent:"center",gap:6,marginTop:8,fontSize:12,color:P.t4 }}>
+              <CheckCircle size={13} style={{ color:"#16A34A" }}/>{fileName}
             </div>
-            <button
-              onClick={clearUpload}
-              className="absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-full bg-zinc-800 text-zinc-400 transition hover:bg-zinc-700 hover:text-white"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
+            <button onClick={e=>{e.stopPropagation();setPreview(null);setFileName(null);if(ref.current)ref.current.value="";}} style={{ position:"absolute",top:8,right:8,width:24,height:24,borderRadius:999,backgroundColor:"rgba(0,0,0,0.10)",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:P.t3 }}><X size={12}/></button>
           </div>
         ) : (
-          <div className="flex flex-col items-center gap-3 px-6 py-4 text-center">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/5 ring-1 ring-white/10">
-              <Image className="h-5 w-5 text-zinc-500" />
-            </div>
+          <div style={{ display:"flex",flexDirection:"column",alignItems:"center",gap:10,padding:24,textAlign:"center" }}>
+            <div style={{ width:44,height:44,borderRadius:10,backgroundColor:"rgba(0,0,0,0.07)",border:`1px solid ${P.border}`,display:"flex",alignItems:"center",justifyContent:"center" }}><Image size={20} style={{ color:P.t4 }}/></div>
             <div>
-              <p className="text-sm font-medium text-zinc-300">Drop screenshot here</p>
-              <p className="mt-0.5 text-xs text-zinc-600">
-                PNG, JPG, WEBP — Playlist screenshots, DJ set lists, Rekordbox exports
-              </p>
+              <p style={{ fontSize:13,fontWeight:600,color:P.t1,margin:0 }}>Drop screenshot here</p>
+              <p style={{ fontSize:11,color:P.t5,marginTop:4 }}>PNG, JPG, WEBP — playlist screenshots, DJ set lists</p>
             </div>
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="mt-1 rounded-md bg-white/8 px-4 py-1.5 text-xs font-medium text-zinc-300 transition hover:bg-white/12 hover:text-white"
-            >
-              Browse Files
-            </button>
+            <button style={{ padding:"6px 16px",borderRadius:6,backgroundColor:"rgba(0,0,0,0.08)",border:`1px solid ${P.border}`,fontSize:12,color:P.t3,cursor:"pointer" }}>Browse Files</button>
           </div>
         )}
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          onChange={handleChange}
-          className="hidden"
-        />
+        <input ref={ref} type="file" accept="image/*" onChange={handleChange} style={{ display:"none" }}/>
       </div>
-
-      {/* Action buttons */}
-      <div className="flex gap-2">
-        <button
-          onClick={handlePaste}
-          className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-white/8 bg-white/4 px-4 py-2.5 text-sm text-zinc-400 transition hover:bg-white/8 hover:text-zinc-200"
-        >
-          <Clipboard className="h-4 w-4" />
-          Paste from Clipboard
-        </button>
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-white/8 bg-white/4 px-4 py-2.5 text-sm text-zinc-400 transition hover:bg-white/8 hover:text-zinc-200"
-        >
-          <Upload className="h-4 w-4" />
-          Upload File
-        </button>
+      <div style={{ display:"flex",gap:8 }}>
+        <button style={{ flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:6,padding:"8px 16px",borderRadius:8,border:`1px solid ${P.border}`,backgroundColor:"rgba(0,0,0,0.05)",fontSize:12,color:P.t3,cursor:"pointer" }}><Clipboard size={13}/> Paste from Clipboard</button>
+        <button onClick={()=>ref.current?.click()} style={{ flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:6,padding:"8px 16px",borderRadius:8,border:`1px solid ${P.border}`,backgroundColor:"rgba(0,0,0,0.05)",fontSize:12,color:P.t3,cursor:"pointer" }}><Upload size={13}/> Upload File</button>
       </div>
     </div>
   );
