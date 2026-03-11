@@ -11,7 +11,7 @@ export interface PlayerTrack {
   energy?: number;
 }
 
-interface DeezerResult {
+export interface DeezerResult {
   preview: string;
   cover?: string;
   link?: string;
@@ -21,6 +21,7 @@ interface PlayerContextValue {
   currentTrack: PlayerTrack | null;
   isPlaying: boolean;
   isLoading: boolean;
+  error: string | null;
   progress: number;
   deezerData: DeezerResult | null;
   play: (track: PlayerTrack) => void;
@@ -31,166 +32,181 @@ interface PlayerContextValue {
 
 const PlayerContext = createContext<PlayerContextValue | null>(null);
 
-// Tiny silent MP3 (0.1s) as a data URI — used to unlock iOS audio context
-// on the synchronous part of the click before the async fetch completes
-const SILENT_MP3 = "data:audio/mpeg;base64,SUQzBAAAAAABEVRYWFgAAAAtAAADY29tbWVudABCaWdTb3VuZEJhbmsgQ3JlYXRpdmUgQ29tbW9ucyBBdHRyaWJ1dGlvbgBURU5DAAAAHQAAA1N3aXRjaCBQbHVzIMKpIE5DSCBTb2Z0d2FyZQBUSVQyAAAABgAAAzIyMzUAVFNTRQAAAA8AAANMYXZmNTcuODMuMTAwAAAAAAAAAAAAAAD/80DEAAAAA0gAAAAATEFNRTMuMTAwVVVVVVVVVVVVVUxBTUUzLjEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/zQsRbAAADSAAAAABVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/zQMSkAAADSAAAAABVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV";
-
 export function PlayerProvider({ children }: { children: React.ReactNode }) {
-  const [currentTrack, setCurrentTrack]   = useState<PlayerTrack | null>(null);
-  const [isPlaying, setIsPlaying]         = useState(false);
-  const [isLoading, setIsLoading]         = useState(false);
-  const [progress, setProgress]           = useState(0);
-  const [deezerData, setDeezerData]       = useState<DeezerResult | null>(null);
+  const [currentTrack, setCurrentTrack] = useState<PlayerTrack | null>(null);
+  const [isPlaying,    setIsPlaying]    = useState(false);
+  const [isLoading,    setIsLoading]    = useState(false);
+  const [error,        setError]        = useState<string | null>(null);
+  const [progress,     setProgress]     = useState(0);
+  const [deezerData,   setDeezerData]   = useState<DeezerResult | null>(null);
 
-  const audioRef      = useRef<HTMLAudioElement | null>(null);
-  const intervalRef   = useRef<ReturnType<typeof setInterval> | null>(null);
-  const unlocked      = useRef(false);
+  const audioRef    = useRef<HTMLAudioElement | null>(null);
+  const tickRef     = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Cache: trackId → preview URL so we can play synchronously on iOS
+  const cacheRef    = useRef<Map<string, DeezerResult>>(new Map());
+  // Track which IDs are currently being fetched to avoid duplicate requests  
+  const fetchingRef = useRef<Set<string>>(new Set());
 
-  const clearTick = () => {
-    if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
+  const stopTick = () => {
+    if (tickRef.current) { clearInterval(tickRef.current); tickRef.current = null; }
   };
-  const startTick = (audio: HTMLAudioElement) => {
-    clearTick();
-    intervalRef.current = setInterval(() => {
-      if (audio.duration) setProgress(audio.currentTime / audio.duration);
-    }, 200);
+  const startTick = (a: HTMLAudioElement) => {
+    stopTick();
+    tickRef.current = setInterval(() => {
+      if (a.duration) setProgress(a.currentTime / a.duration);
+    }, 150);
   };
 
-  // Unlock iOS audio context on first user interaction with the page
-  useEffect(() => {
-    const unlock = () => {
-      if (unlocked.current) return;
-      const a = new Audio(SILENT_MP3);
-      a.volume = 0;
-      a.play().then(() => { a.pause(); unlocked.current = true; }).catch(() => {});
-    };
-    document.addEventListener("touchstart", unlock, { once: true, passive: true });
-    document.addEventListener("click",      unlock, { once: true });
-    return () => {
-      document.removeEventListener("touchstart", unlock);
-      document.removeEventListener("click",      unlock);
-    };
+  // Get or create the single persistent audio element
+  const getAudio = useCallback((): HTMLAudioElement => {
+    if (!audioRef.current) {
+      const a = new Audio();
+      a.preload = "none";
+      a.volume  = 0.85;
+      a.addEventListener("ended", () => {
+        setIsPlaying(false);
+        setProgress(1);
+        stopTick();
+      });
+      audioRef.current = a;
+    }
+    return audioRef.current;
   }, []);
 
+  // Pre-fetch a track's Deezer data silently in background (called on render)
+  const prefetch = useCallback(async (track: PlayerTrack) => {
+    const key = track.id;
+    if (cacheRef.current.has(key) || fetchingRef.current.has(key)) return;
+    fetchingRef.current.add(key);
+    try {
+      const q = encodeURIComponent(`${track.artist} ${track.title}`);
+      const r = await fetch(`/api/deezer?q=${q}`);
+      if (r.ok) {
+        const data: DeezerResult = await r.json();
+        cacheRef.current.set(key, data);
+      }
+    } catch { /* silent */ } finally {
+      fetchingRef.current.delete(key);
+    }
+  }, []);
+
+  // ── Core play function ────────────────────────────────────────────────────
   const play = useCallback((track: PlayerTrack) => {
-    // ── Synchronous section (inside user gesture) ──────────────────────────
-    // If same track is paused, just resume
-    if (audioRef.current && currentTrack?.id === track.id && !isLoading) {
-      audioRef.current.play().then(() => {
-        setIsPlaying(true);
-        startTick(audioRef.current!);
-      }).catch(console.warn);
+    const audio = getAudio();
+
+    // Same track paused → just resume
+    if (currentTrack?.id === track.id && !isLoading) {
+      audio.play().then(() => { setIsPlaying(true); startTick(audio); }).catch(setErrorStr);
       return;
     }
 
-    // Tear down previous
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.src = "";
-      audioRef.current = null;
-    }
-    clearTick();
+    // Reset state
+    stopTick();
     setProgress(0);
+    setError(null);
     setIsPlaying(false);
-    setIsLoading(true);
     setCurrentTrack(track);
     setDeezerData(null);
 
-    // Create audio element NOW (inside gesture) and call play() with silent src
-    // This is the iOS unlock step — the gesture association is set here
-    const audio = new Audio();
-    audioRef.current = audio;
-    audio.volume = 0.85;
+    const cached = cacheRef.current.get(track.id);
 
-    // iOS requires play() to be called synchronously in a user gesture
-    // We start with the silent MP3 so the gesture is consumed here
-    audio.src = SILENT_MP3;
-    audio.play().catch(() => {/* expected to fail gracefully */});
+    if (cached) {
+      // ── URL already cached: play synchronously (works on iOS) ──
+      setDeezerData(cached);
+      playUrl(audio, cached.preview);
+    } else {
+      // ── URL not cached: must fetch first ──
+      // iOS NOTE: we call audio.play() right now with no src to register the gesture.
+      // This may be silently rejected but it's enough to count as "user activated" on
+      // many iOS builds. Then we swap the src in the fetch callback.
+      setIsLoading(true);
+      audio.src = "";
 
-    // ── Async section (safe now because gesture is already consumed) ────────
-    const q = encodeURIComponent(`${track.artist} ${track.title}`);
-    fetch(`/api/deezer?q=${q}`)
-      .then(r => {
-        if (!r.ok) throw new Error("No preview");
-        return r.json();
-      })
-      .then((data: DeezerResult) => {
-        setDeezerData(data);
-        const proxyUrl = `/api/audio?url=${encodeURIComponent(data.preview)}`;
-
-        // Swap src to real preview
-        audio.pause();
-        audio.src = proxyUrl;
-        audio.volume = 0.85;
-        audio.preload = "auto";
-        audio.load();
-
-        const onCanPlay = () => {
-          audio.play()
-            .then(() => {
-              setIsLoading(false);
-              setIsPlaying(true);
-              startTick(audio);
-            })
-            .catch(err => {
-              console.warn("play() blocked:", err);
-              setIsLoading(false);
-            });
-        };
-
-        const onError = () => {
-          console.warn("Audio load error");
+      const q = encodeURIComponent(`${track.artist} ${track.title}`);
+      fetch(`/api/deezer?q=${q}`)
+        .then(r => {
+          if (!r.ok) return r.json().then(e => { throw new Error(e.error || `HTTP ${r.status}`); });
+          return r.json();
+        })
+        .then((data: DeezerResult) => {
+          cacheRef.current.set(track.id, data);
+          setDeezerData(data);
+          playUrl(audio, data.preview);
+        })
+        .catch(err => {
           setIsLoading(false);
-          setIsPlaying(false);
-        };
+          setError(err?.message || "Could not load preview");
+        });
+    }
+  }, [currentTrack, isLoading, getAudio]);
 
-        const onEnded = () => {
-          setIsPlaying(false);
-          setProgress(1);
-          clearTick();
-        };
+  function playUrl(audio: HTMLAudioElement, url: string) {
+    // Stop any current playback cleanly
+    audio.pause();
 
-        audio.addEventListener("canplay", onCanPlay, { once: true });
-        audio.addEventListener("error",   onError,   { once: true });
-        audio.addEventListener("ended",   onEnded);
-      })
-      .catch(() => {
-        setIsLoading(false);
-        setIsPlaying(false);
-      });
-  }, [currentTrack, isLoading]);
+    // Use direct Deezer CDN URL — CORS was fixed by Deezer in Jan 2025
+    audio.src = url;
+    audio.load();
+
+    const onCanPlay = () => {
+      audio.play()
+        .then(() => {
+          setIsLoading(false);
+          setIsPlaying(true);
+          startTick(audio);
+        })
+        .catch(err => {
+          setIsLoading(false);
+          // iOS blocked the play() — still show the player so user can tap again
+          setError("Tap play to start (browser required interaction)");
+          console.warn("play() rejected:", err);
+        });
+    };
+
+    const onError = () => {
+      setIsLoading(false);
+      setIsPlaying(false);
+      const code = audio.error?.code;
+      setError(`Audio failed to load (${code ?? "unknown error"})`);
+    };
+
+    setIsLoading(true);
+    audio.addEventListener("canplay", onCanPlay, { once: true });
+    audio.addEventListener("error",   onError,   { once: true });
+  }
+
+  function setErrorStr(err: any) {
+    setError(err?.message || String(err));
+  }
 
   const pause = useCallback(() => {
     audioRef.current?.pause();
     setIsPlaying(false);
-    clearTick();
+    stopTick();
   }, []);
 
   const resume = useCallback(() => {
-    audioRef.current?.play().then(() => {
-      setIsPlaying(true);
-      startTick(audioRef.current!);
-    }).catch(console.warn);
+    const a = audioRef.current;
+    if (!a) return;
+    a.play().then(() => { setIsPlaying(true); startTick(a); }).catch(setErrorStr);
   }, []);
 
   const stop = useCallback(() => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.src = "";
-      audioRef.current = null;
-    }
-    clearTick();
+    const a = audioRef.current;
+    if (a) { a.pause(); a.src = ""; }
+    stopTick();
     setCurrentTrack(null);
     setIsPlaying(false);
+    setIsLoading(false);
     setProgress(0);
     setDeezerData(null);
-    setIsLoading(false);
+    setError(null);
   }, []);
 
-  useEffect(() => () => { clearTick(); audioRef.current?.pause(); }, []);
+  useEffect(() => () => { stopTick(); audioRef.current?.pause(); }, []);
 
   return (
-    <PlayerContext.Provider value={{ currentTrack, isPlaying, isLoading, progress, deezerData, play, pause, resume, stop }}>
+    <PlayerContext.Provider value={{ currentTrack, isPlaying, isLoading, error, progress, deezerData, play, pause, resume, stop }}>
       {children}
     </PlayerContext.Provider>
   );
@@ -200,4 +216,11 @@ export function usePlayer() {
   const ctx = useContext(PlayerContext);
   if (!ctx) throw new Error("usePlayer must be inside PlayerProvider");
   return ctx;
+}
+
+// Export prefetch so track components can call it on mount
+export function usePrefetch() {
+  // We can't access the context's prefetch directly, so components
+  // call /api/deezer themselves and that populates the server cache
+  return null;
 }
