@@ -10,7 +10,7 @@ export const mockCrates: Crate[] = [
     updatedAt: "2024-11-14T18:32:00Z",
     trackIds: ["t001", "t009", "t003", "t006", "t007", "t012"],
     tracks: mockTracks.filter((t) => ["t001", "t009", "t003", "t006", "t007", "t012"].includes(t.id)),
-    color: "#0D9488",
+    color: "#E55A00",
     tags: ["deep house", "melodic", "late night"],
     avgBpm: 120,
     bpmRange: [117, 122],

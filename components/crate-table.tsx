@@ -56,7 +56,7 @@ export default function CrateTable({ tracks = mockTracks.slice(0, 8), onBuildSet
 
   const SortableHeader = ({ label, sortBy }: { label: string; sortBy: SortKey }) => (
     <th
-      className="cursor-pointer px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-widest text-zinc-600 hover:text-zinc-400"
+      className="cursor-pointer px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-widest text-[#9595A0] hover:text-[#4A4A58]"
       onClick={() => toggleSort(sortBy)}
     >
       <div className="flex items-center gap-1">
@@ -70,25 +70,25 @@ export default function CrateTable({ tracks = mockTracks.slice(0, 8), onBuildSet
     <div className="space-y-4">
       {/* Crate stats + actions */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4 text-xs text-zinc-500">
+        <div className="flex items-center gap-4 text-xs text-[#72727E]">
           <span className="flex items-center gap-1.5">
-            <Music2 className="h-3.5 w-3.5 text-teal-400" />
-            <span className="font-semibold text-zinc-300">{items.length}</span> tracks
+            <Music2 className="h-3.5 w-3.5 text-orange-600" />
+            <span className="font-semibold text-[#2E2E38]">{items.length}</span> tracks
           </span>
-          <span>Avg BPM: <span className="font-mono text-zinc-300">{avgBpm}</span></span>
+          <span>Avg BPM: <span className="font-mono text-[#2E2E38]">{avgBpm}</span></span>
           <span>Avg Energy: <span className={cn("font-mono", energyColor(parseFloat(avgEnergy)))}>{avgEnergy}</span></span>
         </div>
         <div className="flex gap-2">
           <button
             onClick={onExport}
-            className="flex items-center gap-1.5 rounded-md border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-zinc-400 transition hover:bg-white/10 hover:text-white"
+            className="flex items-center gap-1.5 rounded-md border border-black/10 bg-black/4 px-3 py-1.5 text-xs text-[#4A4A58] transition hover:bg-black/7 hover:text-[#111114]"
           >
             <Download className="h-3.5 w-3.5" />
             Export Playlist
           </button>
           <button
             onClick={onBuildSet}
-            className="flex items-center gap-1.5 rounded-md bg-teal-500/20 px-3 py-1.5 text-xs font-medium text-teal-300 ring-1 ring-teal-500/30 transition hover:bg-teal-500/30"
+            className="flex items-center gap-1.5 rounded-md bg-orange-500/15 px-3 py-1.5 text-xs font-medium text-orange-700 ring-1 ring-orange-500/25 transition hover:bg-orange-500/30"
           >
             <ListMusic className="h-3.5 w-3.5" />
             Build Set
@@ -97,33 +97,33 @@ export default function CrateTable({ tracks = mockTracks.slice(0, 8), onBuildSet
       </div>
 
       {/* Table */}
-      <div className="overflow-hidden rounded-xl border border-white/8 bg-[#15151B]">
+      <div className="overflow-hidden rounded-xl border border-black/9 bg-[#D4D4DA]">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-white/6">
+            <tr className="border-b border-black/7">
               <th className="w-8 px-4 py-3" />
               <SortableHeader label="Artist" sortBy="artist" />
-              <th className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-widest text-zinc-600">Track</th>
+              <th className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-widest text-[#9595A0]">Track</th>
               <SortableHeader label="BPM" sortBy="bpm" />
-              <th className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-widest text-zinc-600">Key</th>
+              <th className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-widest text-[#9595A0]">Key</th>
               <SortableHeader label="Energy" sortBy="energy" />
-              <th className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-widest text-zinc-600">Source</th>
-              <th className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-widest text-zinc-600">Gem</th>
+              <th className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-widest text-[#9595A0]">Source</th>
+              <th className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-widest text-[#9595A0]">Gem</th>
               <th className="px-4 py-3" />
             </tr>
           </thead>
           <tbody className="divide-y divide-white/4">
             {sorted.map((track, i) => (
-              <tr key={track.id} className="group transition hover:bg-white/2">
-                <td className="px-4 py-3 font-mono text-xs text-zinc-700">{i + 1}</td>
-                <td className="px-4 py-3 font-medium text-zinc-200">{track.artist}</td>
+              <tr key={track.id} className="group transition hover:bg-black/2">
+                <td className="px-4 py-3 font-mono text-xs text-[#B8B8C2]">{i + 1}</td>
+                <td className="px-4 py-3 font-medium text-[#1E1E26]">{track.artist}</td>
                 <td className="px-4 py-3">
                   <div>
-                    <span className="text-zinc-300">{track.title}</span>
-                    <span className="ml-2 text-xs text-zinc-600">{track.duration}</span>
+                    <span className="text-[#2E2E38]">{track.title}</span>
+                    <span className="ml-2 text-xs text-[#9595A0]">{track.duration}</span>
                   </div>
                 </td>
-                <td className="px-4 py-3 font-mono text-xs text-zinc-400">{track.bpm}</td>
+                <td className="px-4 py-3 font-mono text-xs text-[#4A4A58]">{track.bpm}</td>
                 <td className="px-4 py-3">
                   <span
                     className="rounded px-1.5 py-0.5 font-mono text-[10px] font-semibold"
@@ -143,7 +143,7 @@ export default function CrateTable({ tracks = mockTracks.slice(0, 8), onBuildSet
                           key={j}
                           className={cn(
                             "h-2.5 w-1 rounded-sm",
-                            j < track.energy ? "bg-teal-500" : "bg-white/8"
+                            j < track.energy ? "bg-orange-500" : "bg-black/6"
                           )}
                         />
                       ))}
@@ -154,7 +154,7 @@ export default function CrateTable({ tracks = mockTracks.slice(0, 8), onBuildSet
                   </div>
                 </td>
                 <td className="px-4 py-3">
-                  <span className="rounded-full bg-white/6 px-2 py-0.5 text-[9px] uppercase tracking-wide text-zinc-500">
+                  <span className="rounded-full bg-black/5 px-2 py-0.5 text-[9px] uppercase tracking-wide text-[#72727E]">
                     {track.source.replace(/_/g, " ")}
                   </span>
                 </td>
@@ -168,7 +168,7 @@ export default function CrateTable({ tracks = mockTracks.slice(0, 8), onBuildSet
                 <td className="px-4 py-3">
                   <button
                     onClick={() => removeTrack(track.id)}
-                    className="flex h-6 w-6 items-center justify-center rounded text-zinc-700 opacity-0 transition group-hover:opacity-100 hover:bg-red-500/10 hover:text-red-400"
+                    className="flex h-6 w-6 items-center justify-center rounded text-[#B8B8C2] opacity-0 transition group-hover:opacity-100 hover:bg-red-500/10 hover:text-red-400"
                   >
                     <Trash2 className="h-3 w-3" />
                   </button>

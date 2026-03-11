@@ -3,16 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  LayoutDashboard,
-  Search,
-  Archive,
-  ListMusic,
-  Users,
-  Tag,
-  Radio,
-  History,
-  Settings,
-  Disc3,
+  LayoutDashboard, Search, Archive, ListMusic,
+  Users, Tag, Radio, History, Settings, Disc3,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -35,13 +27,13 @@ export default function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-40 flex w-56 flex-col border-r border-white/5 bg-[#0E0E10]">
+    <aside className="fixed inset-y-0 left-0 z-40 flex w-56 flex-col border-r border-black/10 bg-[#CACACF]">
       {/* Logo */}
-      <div className="flex h-14 items-center gap-2.5 border-b border-white/5 px-4">
-        <div className="flex h-7 w-7 items-center justify-center rounded-md bg-teal-500/20 ring-1 ring-teal-500/40">
-          <Disc3 className="h-4 w-4 text-teal-400" />
+      <div className="flex h-14 items-center gap-2.5 border-b border-black/10 px-4">
+        <div className="flex h-7 w-7 items-center justify-center rounded-md bg-orange-500/20 ring-1 ring-orange-500/30">
+          <Disc3 className="h-4 w-4 text-orange-600" />
         </div>
-        <span className="font-display text-[15px] font-semibold tracking-tight text-white">
+        <span className="font-display text-[15px] font-semibold tracking-tight text-[#111114]">
           CrateMate
         </span>
       </div>
@@ -58,14 +50,14 @@ export default function Sidebar() {
                 className={cn(
                   "group flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-all duration-150",
                   isActive
-                    ? "bg-teal-500/10 text-teal-400 ring-1 ring-teal-500/20"
-                    : "text-zinc-500 hover:bg-white/5 hover:text-zinc-200"
+                    ? "bg-orange-500/15 text-orange-700 ring-1 ring-orange-500/25"
+                    : "text-[#72727E] hover:bg-black/6 hover:text-[#111114]"
                 )}
               >
                 <Icon
                   className={cn(
                     "h-4 w-4 shrink-0 transition-colors",
-                    isActive ? "text-teal-400" : "text-zinc-600 group-hover:text-zinc-400"
+                    isActive ? "text-orange-600" : "text-[#9595A0] group-hover:text-[#4A4A58]"
                   )}
                 />
                 {label}
@@ -74,10 +66,8 @@ export default function Sidebar() {
           })}
         </div>
 
-        {/* Divider */}
-        <div className="mx-4 my-4 border-t border-white/5" />
+        <div className="mx-4 my-4 border-t border-black/8" />
 
-        {/* Bottom nav items */}
         <div className="space-y-0.5 px-2">
           {bottomItems.map(({ label, href, icon: Icon }) => {
             const isActive = pathname === href;
@@ -88,8 +78,8 @@ export default function Sidebar() {
                 className={cn(
                   "group flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-all duration-150",
                   isActive
-                    ? "bg-teal-500/10 text-teal-400"
-                    : "text-zinc-600 hover:bg-white/5 hover:text-zinc-300"
+                    ? "bg-orange-500/15 text-orange-700"
+                    : "text-[#9595A0] hover:bg-black/5 hover:text-[#2E2E38]"
                 )}
               >
                 <Icon className="h-4 w-4 shrink-0" />
@@ -100,9 +90,8 @@ export default function Sidebar() {
         </div>
       </nav>
 
-      {/* Footer */}
-      <div className="border-t border-white/5 px-4 py-3">
-        <p className="text-[10px] font-mono uppercase tracking-widest text-zinc-700">
+      <div className="border-t border-black/8 px-4 py-3">
+        <p className="text-[10px] font-mono uppercase tracking-widest text-[#B8B8C2]">
           v0.1 beta
         </p>
       </div>

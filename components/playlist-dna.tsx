@@ -45,67 +45,67 @@ export default function PlaylistDNA({ dna = mockDNA }: PlaylistDNAProps) {
       {/* Stat cards row */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {/* Artists */}
-        <div className="rounded-xl border border-white/8 bg-[#15151B] p-4">
+        <div className="rounded-xl border border-black/9 bg-[#D4D4DA] p-4">
           <div className="mb-3 flex items-center gap-2">
-            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-teal-500/10">
-              <Users className="h-3.5 w-3.5 text-teal-400" />
+            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-orange-500/10">
+              <Users className="h-3.5 w-3.5 text-orange-600" />
             </div>
-            <span className="text-xs font-medium text-zinc-500">Artists Detected</span>
+            <span className="text-xs font-medium text-[#72727E]">Artists Detected</span>
           </div>
           <div className="space-y-1.5">
             {dna.topArtists.slice(0, 3).map((a) => (
               <div key={a.name} className="flex items-center justify-between">
-                <span className="text-xs text-zinc-300">{a.name}</span>
-                <span className="font-mono text-xs text-zinc-600">{a.count}</span>
+                <span className="text-xs text-[#2E2E38]">{a.name}</span>
+                <span className="font-mono text-xs text-[#9595A0]">{a.count}</span>
               </div>
             ))}
           </div>
-          <div className="mt-2 text-[10px] text-zinc-600">
+          <div className="mt-2 text-[10px] text-[#9595A0]">
             +{dna.topArtists.length - 3} more
           </div>
         </div>
 
         {/* Labels */}
-        <div className="rounded-xl border border-white/8 bg-[#15151B] p-4">
+        <div className="rounded-xl border border-black/9 bg-[#D4D4DA] p-4">
           <div className="mb-3 flex items-center gap-2">
-            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-teal-500/10">
-              <Tag className="h-3.5 w-3.5 text-teal-400" />
+            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-orange-500/10">
+              <Tag className="h-3.5 w-3.5 text-orange-600" />
             </div>
-            <span className="text-xs font-medium text-zinc-500">Labels Detected</span>
+            <span className="text-xs font-medium text-[#72727E]">Labels Detected</span>
           </div>
           <div className="space-y-1.5">
             {dna.topLabels.slice(0, 3).map((l) => (
               <div key={l.name} className="flex items-center justify-between">
-                <span className="text-xs text-zinc-300">{l.name}</span>
-                <span className="font-mono text-xs text-zinc-600">{l.count}</span>
+                <span className="text-xs text-[#2E2E38]">{l.name}</span>
+                <span className="font-mono text-xs text-[#9595A0]">{l.count}</span>
               </div>
             ))}
           </div>
-          <div className="mt-2 text-[10px] text-zinc-600">
+          <div className="mt-2 text-[10px] text-[#9595A0]">
             +{dna.topLabels.length - 3} more
           </div>
         </div>
 
         {/* BPM Cluster */}
-        <div className="rounded-xl border border-white/8 bg-[#15151B] p-4">
+        <div className="rounded-xl border border-black/9 bg-[#D4D4DA] p-4">
           <div className="mb-3 flex items-center gap-2">
-            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-teal-500/10">
-              <Activity className="h-3.5 w-3.5 text-teal-400" />
+            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-orange-500/10">
+              <Activity className="h-3.5 w-3.5 text-orange-600" />
             </div>
-            <span className="text-xs font-medium text-zinc-500">BPM Cluster</span>
+            <span className="text-xs font-medium text-[#72727E]">BPM Cluster</span>
           </div>
           <div className="mt-2">
-            <p className="font-display text-3xl font-bold text-white tabular-nums">
+            <p className="font-display text-3xl font-bold text-[#111114] tabular-nums">
               {dna.bpmCluster.dominant}
             </p>
-            <p className="mt-0.5 text-xs text-zinc-600">
+            <p className="mt-0.5 text-xs text-[#9595A0]">
               Range: {dna.bpmCluster.min}–{dna.bpmCluster.max} BPM
             </p>
           </div>
           <div className="mt-3">
-            <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/8">
+            <div className="h-1.5 w-full overflow-hidden rounded-full bg-black/6">
               <div
-                className="h-full rounded-full bg-gradient-to-r from-teal-500 to-teal-400"
+                className="h-full rounded-full bg-gradient-to-r from-orange-500 to-orange-400"
                 style={{
                   width: `${((dna.bpmCluster.avg - dna.bpmCluster.min) / (dna.bpmCluster.max - dna.bpmCluster.min)) * 100}%`,
                 }}
@@ -115,39 +115,39 @@ export default function PlaylistDNA({ dna = mockDNA }: PlaylistDNAProps) {
         </div>
 
         {/* Energy profile */}
-        <div className="rounded-xl border border-white/8 bg-[#15151B] p-4">
+        <div className="rounded-xl border border-black/9 bg-[#D4D4DA] p-4">
           <div className="mb-3 flex items-center gap-2">
-            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-teal-500/10">
-              <Zap className="h-3.5 w-3.5 text-teal-400" />
+            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-orange-500/10">
+              <Zap className="h-3.5 w-3.5 text-orange-600" />
             </div>
-            <span className="text-xs font-medium text-zinc-500">Energy Profile</span>
+            <span className="text-xs font-medium text-[#72727E]">Energy Profile</span>
           </div>
           <div className="h-16">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={energyData}>
                 <defs>
                   <linearGradient id="energyGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#0D9488" stopOpacity={0.4} />
-                    <stop offset="95%" stopColor="#0D9488" stopOpacity={0} />
+                    <stop offset="5%" stopColor="#E55A00" stopOpacity={0.4} />
+                    <stop offset="95%" stopColor="#E55A00" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <Area
                   type="monotone"
                   dataKey="energy"
-                  stroke="#0D9488"
+                  stroke="#E55A00"
                   strokeWidth={2}
                   fill="url(#energyGrad)"
                   dot={false}
                 />
                 <Tooltip
-                  contentStyle={{ background: "#15151B", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, fontSize: 11 }}
-                  itemStyle={{ color: "#5EEAD4" }}
+                  contentStyle={{ background: "#D4D4DA", border: "1px solid rgba(0,0,0,0.1)", borderRadius: 8, fontSize: 11 }}
+                  itemStyle={{ color: "#F97316" }}
                   labelFormatter={() => ""}
                 />
               </AreaChart>
             </ResponsiveContainer>
           </div>
-          <p className="mt-1 text-[10px] text-zinc-600">
+          <p className="mt-1 text-[10px] text-[#9595A0]">
             Peak energy: {Math.max(...dna.energyProfile)}/10
           </p>
         </div>
@@ -156,20 +156,20 @@ export default function PlaylistDNA({ dna = mockDNA }: PlaylistDNAProps) {
       {/* Genre tags + mood + underground ratio */}
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
         {/* Genre distribution */}
-        <div className="rounded-xl border border-white/8 bg-[#15151B] p-4">
-          <h4 className="mb-3 text-xs font-semibold uppercase tracking-widest text-zinc-500">
+        <div className="rounded-xl border border-black/9 bg-[#D4D4DA] p-4">
+          <h4 className="mb-3 text-xs font-semibold uppercase tracking-widest text-[#72727E]">
             Genre Tags
           </h4>
           <div className="space-y-2">
             {dna.genres.map((g) => (
               <div key={g.name} className="space-y-1">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-zinc-300">{g.name}</span>
-                  <span className="font-mono text-zinc-600">{Math.round(g.weight * 100)}%</span>
+                  <span className="text-[#2E2E38]">{g.name}</span>
+                  <span className="font-mono text-[#9595A0]">{Math.round(g.weight * 100)}%</span>
                 </div>
-                <div className="h-1 w-full overflow-hidden rounded-full bg-white/6">
+                <div className="h-1 w-full overflow-hidden rounded-full bg-black/5">
                   <div
-                    className="h-full rounded-full bg-gradient-to-r from-teal-600 to-teal-400"
+                    className="h-full rounded-full bg-gradient-to-r from-orange-600 to-orange-400"
                     style={{ width: `${g.weight * 100}%` }}
                   />
                 </div>
@@ -179,28 +179,28 @@ export default function PlaylistDNA({ dna = mockDNA }: PlaylistDNAProps) {
         </div>
 
         {/* Mood + metadata */}
-        <div className="rounded-xl border border-white/8 bg-[#15151B] p-4">
-          <h4 className="mb-3 text-xs font-semibold uppercase tracking-widest text-zinc-500">
+        <div className="rounded-xl border border-black/9 bg-[#D4D4DA] p-4">
+          <h4 className="mb-3 text-xs font-semibold uppercase tracking-widest text-[#72727E]">
             Set Mood
           </h4>
           <div className="mb-4 flex flex-wrap gap-1.5">
             {dna.mood.map((m) => (
               <span
                 key={m}
-                className="rounded-full border border-teal-500/20 bg-teal-500/8 px-2.5 py-1 text-xs text-teal-400"
+                className="rounded-full border border-orange-500/20 bg-orange-500/8 px-2.5 py-1 text-xs text-orange-600"
               >
                 {m}
               </span>
             ))}
           </div>
-          <div className="space-y-2 border-t border-white/6 pt-3">
+          <div className="space-y-2 border-t border-black/7 pt-3">
             <div className="flex justify-between text-xs">
-              <span className="text-zinc-600">Estimated Era</span>
-              <span className="text-zinc-300">{dna.estimatedEra}</span>
+              <span className="text-[#9595A0]">Estimated Era</span>
+              <span className="text-[#2E2E38]">{dna.estimatedEra}</span>
             </div>
             <div className="flex justify-between text-xs">
-              <span className="text-zinc-600">Underground Ratio</span>
-              <span className="text-teal-400">{Math.round(dna.undergroundRatio * 100)}%</span>
+              <span className="text-[#9595A0]">Underground Ratio</span>
+              <span className="text-orange-600">{Math.round(dna.undergroundRatio * 100)}%</span>
             </div>
           </div>
         </div>

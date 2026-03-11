@@ -61,8 +61,8 @@ export default function ArtistMiner({ defaultArtistId = "a001", onAddToCrate }: 
             className={cn(
               "rounded-full px-3 py-1.5 text-xs font-medium transition",
               selectedArtistId === a.id
-                ? "bg-teal-500/20 text-teal-300 ring-1 ring-teal-500/40"
-                : "border border-white/8 text-zinc-500 hover:border-white/20 hover:text-zinc-200"
+                ? "bg-orange-500/15 text-orange-700 ring-1 ring-orange-500/30"
+                : "border border-black/9 text-[#72727E] hover:border-black/20 hover:text-[#1E1E26]"
             )}
           >
             {a.name}
@@ -72,17 +72,17 @@ export default function ArtistMiner({ defaultArtistId = "a001", onAddToCrate }: 
 
       {/* Artist info */}
       {artist && (
-        <div className="rounded-xl border border-white/8 bg-[#15151B] p-4">
+        <div className="rounded-xl border border-black/9 bg-[#D4D4DA] p-4">
           <div className="flex items-start justify-between gap-4">
             <div>
               <h3 className="font-display text-lg font-semibold text-white">{artist.name}</h3>
-              <p className="text-xs text-zinc-500">
+              <p className="text-xs text-[#72727E]">
                 {artist.origin} · Active since {artist.activeFrom}
                 {artist.activeTo ? `–${artist.activeTo}` : ""}
               </p>
               <div className="mt-2 flex flex-wrap gap-1">
                 {artist.genres.map((g) => (
-                  <span key={g} className="rounded-full bg-white/6 px-2 py-0.5 text-[10px] text-zinc-500">
+                  <span key={g} className="rounded-full bg-black/5 px-2 py-0.5 text-[10px] text-[#72727E]">
                     {g}
                   </span>
                 ))}
@@ -90,9 +90,9 @@ export default function ArtistMiner({ defaultArtistId = "a001", onAddToCrate }: 
             </div>
             <div className="text-right">
               <p className="font-display text-2xl font-bold text-white">{artist.trackCount}</p>
-              <p className="text-[10px] text-zinc-600">tracks</p>
-              <p className="mt-1 font-display text-lg font-bold text-teal-400">{artist.gemTracks}</p>
-              <p className="text-[10px] text-zinc-600">gems</p>
+              <p className="text-[10px] text-[#9595A0]">tracks</p>
+              <p className="mt-1 font-display text-lg font-bold text-orange-600">{artist.gemTracks}</p>
+              <p className="text-[10px] text-[#9595A0]">gems</p>
             </div>
           </div>
         </div>
@@ -108,8 +108,8 @@ export default function ArtistMiner({ defaultArtistId = "a001", onAddToCrate }: 
               className={cn(
                 "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs transition",
                 filter === f.value
-                  ? "bg-white/10 text-white"
-                  : "text-zinc-500 hover:bg-white/5 hover:text-zinc-300"
+                  ? "bg-black/7 text-white"
+                  : "text-[#72727E] hover:bg-black/4 hover:text-[#2E2E38]"
               )}
             >
               {f.value === "hidden_gems" && <Gem className="h-3 w-3" />}
@@ -119,7 +119,7 @@ export default function ArtistMiner({ defaultArtistId = "a001", onAddToCrate }: 
         </div>
         <button
           onClick={() => setSortDesc((d) => !d)}
-          className="flex items-center gap-1.5 rounded-md border border-white/8 px-3 py-1.5 text-xs text-zinc-500 transition hover:border-white/15 hover:text-zinc-300"
+          className="flex items-center gap-1.5 rounded-md border border-black/9 px-3 py-1.5 text-xs text-[#72727E] transition hover:border-black/15 hover:text-[#2E2E38]"
         >
           <ArrowUpDown className="h-3 w-3" />
           {sortDesc ? "Newest First" : "Oldest First"}
@@ -127,21 +127,21 @@ export default function ArtistMiner({ defaultArtistId = "a001", onAddToCrate }: 
       </div>
 
       {/* Catalog table */}
-      <div className="overflow-hidden rounded-xl border border-white/8 bg-[#15151B]">
+      <div className="overflow-hidden rounded-xl border border-black/9 bg-[#D4D4DA]">
         {loading ? (
           <div className="flex h-40 items-center justify-center">
-            <Loader2 className="h-5 w-5 animate-spin text-teal-500" />
+            <Loader2 className="h-5 w-5 animate-spin text-orange-600" />
           </div>
         ) : entries.length === 0 ? (
-          <div className="flex h-40 items-center justify-center text-sm text-zinc-600">
+          <div className="flex h-40 items-center justify-center text-sm text-[#9595A0]">
             No tracks found for this filter
           </div>
         ) : (
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-white/6">
+              <tr className="border-b border-black/7">
                 {["Year", "Track", "Label", "Cat#", "BPM", "Gem Score", ""].map((h) => (
-                  <th key={h} className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-widest text-zinc-600">
+                  <th key={h} className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-widest text-[#9595A0]">
                     {h}
                   </th>
                 ))}
@@ -151,11 +151,11 @@ export default function ArtistMiner({ defaultArtistId = "a001", onAddToCrate }: 
               {entries.map((entry) => {
                 const isAdded = addedIds.has(entry.id);
                 return (
-                  <tr key={entry.id} className="group transition hover:bg-white/2">
-                    <td className="w-14 px-4 py-3 font-mono text-xs text-zinc-500">{entry.year}</td>
+                  <tr key={entry.id} className="group transition hover:bg-black/2">
+                    <td className="w-14 px-4 py-3 font-mono text-xs text-[#72727E]">{entry.year}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
-                        <span className="font-medium text-zinc-200">{entry.title}</span>
+                        <span className="font-medium text-[#1E1E26]">{entry.title}</span>
                         {entry.isRemix && (
                           <span className="rounded bg-purple-500/10 px-1.5 py-0.5 text-[9px] font-medium text-purple-400">
                             REMIX
@@ -168,14 +168,14 @@ export default function ArtistMiner({ defaultArtistId = "a001", onAddToCrate }: 
                         )}
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-xs text-zinc-500">{entry.label}</td>
-                    <td className="px-4 py-3 font-mono text-xs text-zinc-600">{entry.catalogNumber ?? "—"}</td>
-                    <td className="px-4 py-3 font-mono text-xs text-zinc-500">{entry.bpm ?? "—"}</td>
+                    <td className="px-4 py-3 text-xs text-[#72727E]">{entry.label}</td>
+                    <td className="px-4 py-3 font-mono text-xs text-[#9595A0]">{entry.catalogNumber ?? "—"}</td>
+                    <td className="px-4 py-3 font-mono text-xs text-[#72727E]">{entry.bpm ?? "—"}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1.5">
-                        <div className="h-1.5 w-12 overflow-hidden rounded-full bg-white/8">
+                        <div className="h-1.5 w-12 overflow-hidden rounded-full bg-black/6">
                           <div
-                            className="h-full rounded-full bg-gradient-to-r from-teal-600 to-teal-400"
+                            className="h-full rounded-full bg-gradient-to-r from-orange-600 to-orange-400"
                             style={{ width: `${entry.gemScore}%` }}
                           />
                         </div>
@@ -192,14 +192,14 @@ export default function ArtistMiner({ defaultArtistId = "a001", onAddToCrate }: 
                           className={cn(
                             "flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition",
                             isAdded
-                              ? "bg-teal-500/10 text-teal-500 ring-1 ring-teal-500/20"
-                              : "bg-white/8 text-zinc-400 hover:bg-teal-500/20 hover:text-teal-300"
+                              ? "bg-orange-500/10 text-orange-600 ring-1 ring-orange-500/20"
+                              : "bg-black/6 text-[#4A4A58] hover:bg-orange-500/15 hover:text-orange-700"
                           )}
                         >
                           <Plus className="h-3 w-3" />
                           {isAdded ? "Added" : "Add"}
                         </button>
-                        <button className="flex h-6 w-6 items-center justify-center rounded text-zinc-700 hover:bg-white/8 hover:text-zinc-400">
+                        <button className="flex h-6 w-6 items-center justify-center rounded text-[#B8B8C2] hover:bg-black/6 hover:text-[#4A4A58]">
                           <ExternalLink className="h-3 w-3" />
                         </button>
                       </div>

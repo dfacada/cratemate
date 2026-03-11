@@ -3,7 +3,7 @@ import Topbar from "@/components/topbar";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-[#0E0E10]">
+    <div className="min-h-screen bg-[#E2E2E6]">
       <Sidebar />
       <Topbar />
       <main className="ml-56 pt-14">

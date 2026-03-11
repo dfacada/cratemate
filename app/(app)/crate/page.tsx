@@ -17,11 +17,11 @@ export default function CratePage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="font-display text-2xl font-semibold text-white">Crates</h1>
-          <p className="mt-1 text-sm text-zinc-500">
+          <p className="mt-1 text-sm text-[#72727E]">
             {mockCrates.length} crates · {mockCrates.reduce((a, c) => a + c.trackIds.length, 0)} total tracks
           </p>
         </div>
-        <button className="flex items-center gap-2 rounded-lg bg-teal-500/20 px-4 py-2 text-sm font-medium text-teal-300 ring-1 ring-teal-500/30 transition hover:bg-teal-500/30">
+        <button className="flex items-center gap-2 rounded-lg bg-orange-500/15 px-4 py-2 text-sm font-medium text-orange-700 ring-1 ring-orange-500/25 transition hover:bg-orange-500/30">
           <Plus className="h-4 w-4" />
           New Crate
         </button>
@@ -37,8 +37,8 @@ export default function CratePage() {
               className={cn(
                 "flex w-full items-start gap-3 rounded-xl border p-3.5 text-left transition",
                 selectedCrateId === crate.id
-                  ? "border-white/15 bg-white/6"
-                  : "border-white/6 bg-[#15151B] hover:border-white/10 hover:bg-white/4"
+                  ? "border-black/15 bg-black/5"
+                  : "border-black/7 bg-[#D4D4DA] hover:border-black/10 hover:bg-black/4"
               )}
             >
               <div
@@ -46,13 +46,13 @@ export default function CratePage() {
                 style={{ backgroundColor: crate.color }}
               />
               <div className="min-w-0">
-                <p className="truncate text-sm font-medium text-zinc-200">{crate.name}</p>
-                <p className="text-xs text-zinc-600">
+                <p className="truncate text-sm font-medium text-[#1E1E26]">{crate.name}</p>
+                <p className="text-xs text-[#9595A0]">
                   {crate.trackIds.length} tracks · {crate.avgBpm} BPM
                 </p>
                 <div className="mt-1.5 flex flex-wrap gap-1">
                   {(crate.tags ?? []).slice(0, 2).map((tag) => (
-                    <span key={tag} className="rounded-full bg-white/6 px-1.5 py-0.5 text-[9px] text-zinc-600">
+                    <span key={tag} className="rounded-full bg-black/5 px-1.5 py-0.5 text-[9px] text-[#9595A0]">
                       {tag}
                     </span>
                   ))}
@@ -75,7 +75,7 @@ export default function CratePage() {
                 <div>
                   <h2 className="font-display text-lg font-semibold text-white">{selectedCrate.name}</h2>
                   {selectedCrate.description && (
-                    <p className="text-sm text-zinc-400">{selectedCrate.description}</p>
+                    <p className="text-sm text-[#4A4A58]">{selectedCrate.description}</p>
                   )}
                 </div>
               </div>
