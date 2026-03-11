@@ -1,151 +1,202 @@
 "use client";
 import { useState } from "react";
-import { X, Disc3, ExternalLink, Volume2, AlertCircle } from "lucide-react";
+import { X, Music2, ChevronDown, ChevronUp, ExternalLink, AlertCircle, Loader2, Settings } from "lucide-react";
 import { usePlayer } from "@/context/player-context";
-import PlayButton from "@/components/play-button";
 
-const A = { border:"#e2e8f0", t1:"#0f172a", t3:"#334155", t4:"#64748b", t5:"#94a3b8", accent:"#00B4D8" };
+const A = {
+  bg: "#ffffff", border: "#e2e8f0",
+  t1: "#0f172a", t3: "#334155", t4: "#64748b", t5: "#94a3b8",
+  accent: "#00B4D8", accentBg: "rgba(0,180,216,0.09)",
+};
 
-const PLATFORMS = [
-  { id:"yt", label:"YouTube",    color:"#FF0000", href:(a:string,t:string)=>`https://www.youtube.com/results?search_query=${enc(a+' '+t)}` },
-  { id:"sc", label:"SoundCloud", color:"#FF5500", href:(a:string,t:string)=>`https://soundcloud.com/search?q=${enc(a+' '+t)}` },
-  { id:"bp", label:"Beatport",   color:"#04BE5B", href:(a:string,t:string)=>`https://www.beatport.com/search?q=${enc(a+' '+t)}` },
-];
-const enc = (s: string) => encodeURIComponent(s);
-
-function Chip({ label, accent }: { label: string; accent?: boolean }) {
-  return (
-    <span style={{ padding:"3px 7px", borderRadius:6, fontFamily:"monospace", fontSize:10, whiteSpace:"nowrap",
-      backgroundColor: accent ? "rgba(0,180,216,0.1)" : "#f1f5f9", color: accent ? "#00B4D8" : "#64748b" }}>
-      {label}
-    </span>
-  );
+// Build the SC widget iframe URL
+function scWidgetUrl(permalink: string) {
+  const encoded = encodeURIComponent(permalink);
+  return [
+    `https://w.soundcloud.com/player/?url=${encoded}`,
+    "auto_play=true",
+    "visual=true",
+    "show_artwork=true",
+    "hide_related=true",
+    "show_comments=false",
+    "show_user=true",
+    "show_reposts=false",
+    "show_teaser=false",
+    "buying=false",
+    "liking=false",
+    "download=false",
+    "sharing=false",
+    `color=${encodeURIComponent("#00B4D8")}`,
+  ].join("&");
 }
 
 export default function PlayerBar() {
-  const { currentTrack, isPlaying, isLoading, error, progress, deezerData, stop, play } = usePlayer();
-  const [hovered, setHovered] = useState<string|null>(null);
+  const { currentTrack, scResult, status, errorMsg, stop, swapCandidate, play } = usePlayer();
+  const [expanded, setExpanded] = useState(false);
+  const [showCandidates, setShowCandidates] = useState(false);
 
-  if (!currentTrack) return null;
+  if (!currentTrack || status === "idle") return null;
 
-  const pct     = Math.round(progress * 100);
-  const elapsed = Math.round(progress * 30);
+  const isLoading = status === "loading";
+  const isError   = status === "error" || status === "no_client_id";
+  const isReady   = status === "ready" && !!scResult;
+  const noClientId = status === "no_client_id";
+
+  // Compact height when not expanded, tall when expanded
+  const widgetHeight = expanded ? 300 : 166;
 
   return (
     <>
       <div className="player-bar">
-        {/* Progress bar */}
-        <div style={{ height: 3, backgroundColor: "#f1f5f9" }}>
-          <div style={{ height:"100%", width:`${pct}%`, background:`linear-gradient(to right,${A.accent},#67e8f9)`, transition:"width 0.15s linear" }} />
-        </div>
 
-        <div style={{ display:"flex", alignItems:"center", height:64 }}>
-
-          {/* Album art / waveform icon */}
-          <div style={{ padding:"0 14px", flexShrink:0 }}>
-            {deezerData?.cover
-              ? <img src={deezerData.cover} alt="" style={{ width:40, height:40, borderRadius:8, objectFit:"cover", display:"block" }} />
-              : (
-                <div style={{ width:40, height:40, borderRadius:8, backgroundColor:"rgba(0,180,216,0.1)", border:"1px solid rgba(0,180,216,0.2)", display:"flex", alignItems:"center", justifyContent:"center" }}>
-                  {isPlaying
-                    ? <div style={{ display:"flex", alignItems:"flex-end", gap:2, height:18 }}>
-                        {[1,2,3,4].map(i=>(
-                          <div key={i} style={{ width:2.5, borderRadius:2, backgroundColor:A.accent, animation:`barBounce ${0.5+i*0.1}s ease-in-out infinite alternate`, animationDelay:`${i*0.1}s`, height:`${30+i*14}%` }} />
-                        ))}
-                      </div>
-                    : <Disc3 size={16} color={A.accent} />
-                  }
-                </div>
-              )
-            }
-          </div>
-
-          {/* Track info */}
-          <div style={{ flex:"0 1 220px", minWidth:0, paddingRight:10 }}>
-            <p style={{ fontSize:13, fontWeight:600, color:A.t1, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
-              {currentTrack.title}
-            </p>
-            <p style={{ fontSize:11, color:A.t4, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
-              {currentTrack.artist}{currentTrack.label ? ` · ${currentTrack.label}` : ""}
-            </p>
-          </div>
-
-          {/* Play/pause */}
-          <div style={{ flexShrink:0, paddingRight:14 }}>
-            <PlayButton track={currentTrack} size={36} />
-          </div>
-
-          {/* Error banner — visible on all sizes */}
-          {error && (
-            <div style={{ display:"flex", alignItems:"center", gap:6, padding:"5px 12px", borderRadius:8, backgroundColor:"#fef2f2", border:"1px solid #fecaca", marginRight:10, flexShrink:0, maxWidth:280 }}>
-              <AlertCircle size={12} color="#ef4444" style={{ flexShrink:0 }} />
-              <span style={{ fontSize:11, color:"#dc2626", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{error}</span>
-              <button onClick={() => play(currentTrack)} style={{ fontSize:11, color:"#00B4D8", background:"none", border:"none", cursor:"pointer", flexShrink:0, fontWeight:600 }}>Retry</button>
+        {/* ── Loading state ── */}
+        {isLoading && (
+          <div style={{ display: "flex", alignItems: "center", gap: 12, height: 68, padding: "0 16px" }}>
+            <div style={{ width: 40, height: 40, borderRadius: 8, backgroundColor: A.accentBg, border: `1px solid rgba(0,180,216,0.2)`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <Loader2 size={16} color={A.accent} style={{ animation: "spin 0.7s linear infinite" }} />
             </div>
-          )}
-
-          {/* Center info — hidden on mobile */}
-          {!error && (
-            <div className="player-center" style={{ flex:1, display:"flex", alignItems:"center", gap:10, overflow:"hidden", padding:"0 8px" }}>
-              <div style={{ display:"flex", alignItems:"center", gap:5, padding:"3px 9px", borderRadius:20,
-                backgroundColor: isLoading ? "#f1f5f9" : "rgba(0,180,216,0.08)",
-                border:`1px solid ${isLoading ? A.border : "rgba(0,180,216,0.2)"}`, flexShrink:0 }}>
-                <Volume2 size={10} color={isLoading ? A.t5 : A.accent} />
-                <span style={{ fontSize:10, fontWeight:600, color:isLoading ? A.t5 : A.accent, letterSpacing:"0.04em" }}>
-                  {isLoading ? "LOADING…" : `${elapsed}s / 30s`}
-                </span>
-              </div>
-              <div style={{ display:"flex", gap:4 }}>
-                {currentTrack.bpm    && <Chip label={`${currentTrack.bpm} BPM`} />}
-                {currentTrack.key    && <Chip label={currentTrack.key} />}
-                {currentTrack.energy && <Chip label={`E${currentTrack.energy}`} accent />}
-              </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ fontSize: 13, fontWeight: 600, color: A.t1, marginBottom: 2 }}>{currentTrack.title}</p>
+              <p style={{ fontSize: 11, color: A.t4 }}>Searching SoundCloud…</p>
             </div>
-          )}
-
-          {/* Platform links + close — hidden on mobile */}
-          <div className="player-links" style={{ display:"flex", alignItems:"center", gap:5, padding:"0 12px", flexShrink:0 }}>
-            {deezerData?.link && (
-              <a href={deezerData.link} target="_blank" rel="noopener noreferrer"
-                style={{ display:"flex", alignItems:"center", gap:5, padding:"4px 9px", borderRadius:16, border:`1px solid ${A.border}`, backgroundColor:"#fafafa", textDecoration:"none", fontSize:11, color:A.t4, fontWeight:500, whiteSpace:"nowrap" }}>
-                <div style={{ width:10, height:10, borderRadius:"50%", backgroundColor:"#a855f7" }} />Deezer
-              </a>
-            )}
-            {PLATFORMS.map(p => (
-              <a key={p.id} href={p.href(currentTrack.artist,currentTrack.title)} target="_blank" rel="noopener noreferrer"
-                onMouseEnter={()=>setHovered(p.id)} onMouseLeave={()=>setHovered(null)}
-                style={{ display:"flex", alignItems:"center", gap:5, padding:"4px 9px", borderRadius:16,
-                  border:`1.5px solid ${hovered===p.id ? p.color+"55" : A.border}`,
-                  backgroundColor:hovered===p.id ? p.color+"12" : "#fafafa",
-                  textDecoration:"none", fontSize:11, color:hovered===p.id ? p.color : A.t4,
-                  fontWeight:500, whiteSpace:"nowrap", transition:"all 0.12s" }}>
-                <div style={{ width:10, height:10, borderRadius:"50%", backgroundColor:p.color }} />{p.label}
-              </a>
-            ))}
-            <button onClick={stop}
-              style={{ width:28, height:28, borderRadius:7, border:`1px solid ${A.border}`, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", color:A.t5, backgroundColor:"transparent", marginLeft:4 }}
-              onMouseEnter={e=>{e.currentTarget.style.backgroundColor="#fef2f2";e.currentTarget.style.color="#ef4444";}}
-              onMouseLeave={e=>{e.currentTarget.style.backgroundColor="transparent";e.currentTarget.style.color=A.t5;}}>
-              <X size={13} />
+            <button onClick={stop} style={{ width: 28, height: 28, border: `1px solid ${A.border}`, borderRadius: 7, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: A.t5, backgroundColor: "transparent" }}>
+              <X size={12} />
             </button>
           </div>
-        </div>
+        )}
+
+        {/* ── Error state ── */}
+        {isError && (
+          <div style={{ display: "flex", alignItems: "center", gap: 12, height: 68, padding: "0 16px" }}>
+            <div style={{ width: 40, height: 40, borderRadius: 8, backgroundColor: noClientId ? "#fff7ed" : "#fef2f2", border: `1px solid ${noClientId ? "#fed7aa" : "#fecaca"}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              {noClientId ? <Settings size={16} color="#f97316" /> : <AlertCircle size={16} color="#ef4444" />}
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ fontSize: 13, fontWeight: 600, color: A.t1, marginBottom: 2 }}>{currentTrack.title}</p>
+              <p style={{ fontSize: 11, color: noClientId ? "#ea580c" : "#dc2626" }}>{errorMsg}</p>
+              {noClientId && (
+                <p style={{ fontSize: 10, color: A.t5, marginTop: 2 }}>
+                  Add <code style={{ fontSize: 10, backgroundColor: "#f1f5f9", padding: "1px 4px", borderRadius: 3 }}>SOUNDCLOUD_CLIENT_ID</code> to Vercel env vars
+                </p>
+              )}
+            </div>
+            <button onClick={() => play(currentTrack)} style={{ padding: "5px 10px", fontSize: 11, color: A.accent, fontWeight: 600, border: `1px solid rgba(0,180,216,0.3)`, borderRadius: 6, cursor: "pointer", backgroundColor: A.accentBg, marginRight: 6 }}>Retry</button>
+            <button onClick={stop} style={{ width: 28, height: 28, border: `1px solid ${A.border}`, borderRadius: 7, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: A.t5, backgroundColor: "transparent" }}>
+              <X size={12} />
+            </button>
+          </div>
+        )}
+
+        {/* ── Ready: SoundCloud widget ── */}
+        {isReady && scResult && (
+          <div>
+            {/* Header row */}
+            <div style={{ display: "flex", alignItems: "center", height: 48, padding: "0 14px", gap: 10, borderBottom: expanded ? `1px solid ${A.border}` : "none" }}>
+
+              {/* SC logo pill */}
+              <div style={{ display: "flex", alignItems: "center", gap: 5, padding: "3px 8px", borderRadius: 12, backgroundColor: "#ff550015", border: "1px solid #ff550030", flexShrink: 0 }}>
+                <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: "#FF5500" }} />
+                <span style={{ fontSize: 10, fontWeight: 700, color: "#FF5500", letterSpacing: "0.05em" }}>SOUNDCLOUD</span>
+              </div>
+
+              {/* Track name */}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ fontSize: 13, fontWeight: 600, color: A.t1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {scResult.scTitle}
+                  {scResult.scTitle.toLowerCase() !== currentTrack.title.toLowerCase() && (
+                    <span style={{ fontSize: 10, color: A.t5, marginLeft: 6, fontWeight: 400 }}>
+                      (searched: {currentTrack.title})
+                    </span>
+                  )}
+                </p>
+                <p style={{ fontSize: 11, color: A.t4 }}>{scResult.scArtist}</p>
+              </div>
+
+              {/* Wrong match? — show candidates */}
+              {scResult.candidates && scResult.candidates.length > 1 && (
+                <button
+                  onClick={() => setShowCandidates(!showCandidates)}
+                  title="Wrong track? Pick a different match"
+                  style={{ padding: "4px 8px", fontSize: 10, color: A.t4, border: `1px solid ${A.border}`, borderRadius: 6, cursor: "pointer", backgroundColor: "transparent", flexShrink: 0, display: "flex", alignItems: "center", gap: 4 }}
+                >
+                  Wrong match?
+                  {showCandidates ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
+                </button>
+              )}
+
+              {/* Expand / collapse widget height */}
+              <button
+                onClick={() => setExpanded(!expanded)}
+                title={expanded ? "Compact view" : "Expand player"}
+                style={{ width: 28, height: 28, border: `1px solid ${A.border}`, borderRadius: 7, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: A.t5, backgroundColor: "transparent", flexShrink: 0 }}
+              >
+                {expanded ? <ChevronDown size={12} /> : <ChevronUp size={12} />}
+              </button>
+
+              {/* Open on SC */}
+              <a href={scResult.permalink_url} target="_blank" rel="noopener noreferrer"
+                style={{ width: 28, height: 28, border: `1px solid ${A.border}`, borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center", color: A.t5, textDecoration: "none", flexShrink: 0 }}>
+                <ExternalLink size={12} />
+              </a>
+
+              {/* Close */}
+              <button onClick={stop}
+                style={{ width: 28, height: 28, border: `1px solid ${A.border}`, borderRadius: 7, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: A.t5, backgroundColor: "transparent", flexShrink: 0 }}
+                onMouseEnter={e => { e.currentTarget.style.backgroundColor = "#fef2f2"; e.currentTarget.style.color = "#ef4444"; }}
+                onMouseLeave={e => { e.currentTarget.style.backgroundColor = "transparent"; e.currentTarget.style.color = A.t5; }}
+              >
+                <X size={12} />
+              </button>
+            </div>
+
+            {/* Candidate picker */}
+            {showCandidates && scResult.candidates && (
+              <div style={{ padding: "8px 14px", borderBottom: `1px solid ${A.border}`, backgroundColor: "#fafafa" }}>
+                <p style={{ fontSize: 10, color: A.t5, marginBottom: 6, fontWeight: 600, letterSpacing: "0.05em" }}>ALTERNATIVE MATCHES</p>
+                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                  {scResult.candidates.map((c, i) => (
+                    <button key={i} onClick={() => { swapCandidate(c.url); setShowCandidates(false); }}
+                      style={{ textAlign: "left", padding: "6px 10px", borderRadius: 6, border: `1px solid ${c.url === scResult.permalink_url ? A.accent : A.border}`, backgroundColor: c.url === scResult.permalink_url ? A.accentBg : "#fff", cursor: "pointer", display: "flex", alignItems: "center", gap: 8 }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ fontSize: 12, fontWeight: 500, color: A.t1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.title}</p>
+                        <p style={{ fontSize: 10, color: A.t4 }}>{c.artist}</p>
+                      </div>
+                      <span style={{ fontSize: 10, color: A.t5, flexShrink: 0 }}>score: {Math.round(c.score)}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* The SC widget iframe */}
+            <iframe
+              key={scResult.permalink_url}  // force remount when track changes
+              src={scWidgetUrl(scResult.permalink_url)}
+              width="100%"
+              height={widgetHeight}
+              scrolling="no"
+              frameBorder="0"
+              allow="autoplay"
+              style={{ display: "block", border: "none" }}
+            />
+          </div>
+        )}
       </div>
 
       <style>{`
-        @keyframes barBounce { from{transform:scaleY(0.3)} to{transform:scaleY(1)} }
+        @keyframes spin { to { transform: rotate(360deg); } }
 
         .player-bar {
           position: fixed;
           bottom: 0; left: 224px; right: 0;
           background: #fff;
           border-top: 1px solid #e2e8f0;
-          box-shadow: 0 -4px 20px rgba(0,0,0,0.06);
+          box-shadow: 0 -4px 24px rgba(0,0,0,0.08);
           z-index: 39;
+          overflow: hidden;
         }
         @media (max-width: 768px) {
           .player-bar { left: 0; bottom: 56px; }
-          .player-center, .player-links { display: none !important; }
         }
       `}</style>
     </>
