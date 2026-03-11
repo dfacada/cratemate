@@ -1,10 +1,10 @@
 "use client";
+import { useState, useRef, useCallback } from "react";
+import { Upload, Clipboard, ImageIcon, X, CheckCircle } from "lucide-react";
 
-import { useState, useRef, useCallback, DragEvent, ChangeEvent } from "react";
-import { Upload, Clipboard, Image, X, Loader2, CheckCircle } from "lucide-react";
-import { cn } from "@/lib/utils";
+const A = { border:"#e2e8f0", t1:"#0f172a", t4:"#64748b", t5:"#94a3b8", accent:"#00B4D8" };
 
-export default function ScreenshotUpload({ onUpload, processing = false, className }: { onUpload: (file: File) => void; processing?: boolean; className?: string }) {
+export default function ScreenshotUpload({ onUpload, processing = false }: { onUpload: (file: File) => void; processing?: boolean }) {
   const [isDragging, setIsDragging] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
@@ -19,44 +19,95 @@ export default function ScreenshotUpload({ onUpload, processing = false, classNa
     onUpload(file);
   }, [onUpload]);
 
-  const handleDrop = (e: DragEvent<HTMLDivElement>) => { e.preventDefault(); setIsDragging(false); const f = e.dataTransfer.files[0]; if (f) handleFile(f); };
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault(); setIsDragging(false);
+    const f = e.dataTransfer.files[0]; if (f) handleFile(f);
+  };
   const handlePaste = useCallback(async () => {
     try {
       const items = await navigator.clipboard.read();
-      for (const item of items) for (const type of item.types) if (type.startsWith("image/")) { const blob = await item.getType(type); handleFile(new File([blob], "paste.png", { type })); }
+      for (const item of items)
+        for (const type of item.types)
+          if (type.startsWith("image/")) { const blob = await item.getType(type); handleFile(new File([blob], "paste.png", { type })); }
     } catch {}
   }, [handleFile]);
 
+  const dropZoneStyle: React.CSSProperties = {
+    position: "relative", minHeight: 220, borderRadius: 12,
+    border: `2px dashed ${isDragging ? A.accent : preview ? "rgba(0,180,216,0.4)" : A.border}`,
+    backgroundColor: isDragging ? "rgba(0,180,216,0.04)" : preview ? "#f8fafc" : "#fafbfc",
+    display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+    transition: "all 0.15s", cursor: "pointer",
+  };
+
   return (
-    <div className={cn("space-y-3", className)}>
-      <div onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }} onDragLeave={() => setIsDragging(false)} onDrop={handleDrop}
-        className={cn("relative flex min-h-48 flex-col items-center justify-center rounded-xl border-2 border-dashed transition-all",
-          isDragging ? "border-cyan-400 bg-cyan-50" : preview ? "border-cyan-200 bg-slate-50" : "border-slate-200 bg-slate-50 hover:border-slate-300 hover:bg-white"
-        )}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <div
+        style={dropZoneStyle}
+        onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+        onDragLeave={() => setIsDragging(false)}
+        onDrop={handleDrop}
+        onClick={() => !preview && !processing && fileInputRef.current?.click()}
+      >
         {processing ? (
-          <div className="flex flex-col items-center gap-3">
-            <Loader2 className="h-8 w-8 animate-spin text-cyan-500" />
-            <div className="text-center"><p className="text-sm font-medium text-slate-700">Running OCR…</p><p className="text-xs text-slate-400">Extracting track data from your screenshot</p></div>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
+            <div style={{ width: 36, height: 36, borderRadius: "50%", border: `3px solid #e2e8f0`, borderTopColor: A.accent, animation: "spin 0.7s linear infinite" }} />
+            <div style={{ textAlign: "center" }}>
+              <p style={{ fontSize: 14, fontWeight: 600, color: A.t1 }}>Running OCR…</p>
+              <p style={{ fontSize: 12, color: A.t5, marginTop: 4 }}>Extracting track data from your screenshot</p>
+            </div>
           </div>
         ) : preview ? (
-          <div className="relative w-full p-4">
-            <img src={preview} alt="Preview" className="mx-auto max-h-40 rounded-lg object-contain" />
-            <div className="mt-2 flex items-center justify-center gap-2 text-xs text-slate-500"><CheckCircle className="h-3.5 w-3.5 text-emerald-500" /><span>{fileName}</span></div>
-            <button onClick={() => { setPreview(null); setFileName(null); }} className="absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-full bg-slate-200 text-slate-500 hover:bg-slate-300"><X className="h-3.5 w-3.5" /></button>
+          <div style={{ position: "relative", width: "100%", padding: 16 }}>
+            <img src={preview} alt="Preview" style={{ display: "block", margin: "0 auto", maxHeight: 160, borderRadius: 8, objectFit: "contain" }} />
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 10, fontSize: 12, color: A.t4 }}>
+              <CheckCircle size={13} color="#10b981" />
+              <span>{fileName}</span>
+            </div>
+            <button
+              onClick={(e) => { e.stopPropagation(); setPreview(null); setFileName(null); }}
+              style={{ position: "absolute", top: 10, right: 10, width: 24, height: 24, borderRadius: "50%", backgroundColor: "#e2e8f0", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: A.t4 }}
+            ><X size={12} /></button>
           </div>
         ) : (
-          <div className="flex flex-col items-center gap-3 px-6 py-4 text-center">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white shadow-sm ring-1 ring-slate-200"><Image className="h-5 w-5 text-slate-400" /></div>
-            <div><p className="text-sm font-medium text-slate-700">Drop screenshot here</p><p className="mt-0.5 text-xs text-slate-400">PNG, JPG, WEBP — Playlist screenshots, DJ set lists, Rekordbox exports</p></div>
-            <button onClick={() => fileInputRef.current?.click()} className="mt-1 rounded-lg border border-slate-200 bg-white px-4 py-1.5 text-xs font-medium text-slate-600 shadow-sm transition hover:bg-slate-50 hover:text-slate-800">Browse Files</button>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 14, padding: "24px 32px", textAlign: "center" }}>
+            <div style={{ width: 52, height: 52, borderRadius: 14, backgroundColor: "#fff", boxShadow: "0 1px 4px rgba(0,0,0,0.08)", border: `1px solid ${A.border}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <ImageIcon size={22} color={A.t5} />
+            </div>
+            <div>
+              <p style={{ fontSize: 14, fontWeight: 600, color: A.t1 }}>Drop your playlist screenshot here</p>
+              <p style={{ fontSize: 12, color: A.t5, marginTop: 5, lineHeight: 1.5 }}>
+                PNG, JPG, WEBP — playlist screenshots, DJ set lists, Rekordbox exports
+              </p>
+            </div>
+            <button
+              onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}
+              style={{ padding: "7px 18px", borderRadius: 8, border: `1px solid ${A.border}`, backgroundColor: "#fff", fontSize: 12, fontWeight: 500, color: A.t4, cursor: "pointer", fontFamily: "inherit", boxShadow: "0 1px 2px rgba(0,0,0,0.04)" }}
+            >Browse Files</button>
           </div>
         )}
-        <input ref={fileInputRef} type="file" accept="image/*" onChange={(e: ChangeEvent<HTMLInputElement>) => { const f = e.target.files?.[0]; if (f) handleFile(f); }} className="hidden" />
+        <input ref={fileInputRef} type="file" accept="image/*"
+          onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }}
+          style={{ display: "none" }}
+        />
       </div>
-      <div className="flex gap-2">
-        <button onClick={handlePaste} className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-600 shadow-sm transition hover:bg-slate-50"><Clipboard className="h-4 w-4" />Paste from Clipboard</button>
-        <button onClick={() => fileInputRef.current?.click()} className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-600 shadow-sm transition hover:bg-slate-50"><Upload className="h-4 w-4" />Upload File</button>
+
+      <div style={{ display: "flex", gap: 10 }}>
+        {[
+          { icon: Clipboard, label: "Paste from Clipboard", action: handlePaste },
+          { icon: Upload, label: "Upload File", action: () => fileInputRef.current?.click() },
+        ].map(({ icon: Icon, label, action }) => (
+          <button key={label} onClick={action}
+            style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "10px 0", borderRadius: 9, border: `1px solid ${A.border}`, backgroundColor: "#fff", fontSize: 13, color: A.t4, cursor: "pointer", fontFamily: "inherit", boxShadow: "0 1px 2px rgba(0,0,0,0.04)", transition: "all 0.12s" }}
+            onMouseEnter={e => { e.currentTarget.style.backgroundColor = "#f8fafc"; e.currentTarget.style.borderColor = "#cbd5e1"; }}
+            onMouseLeave={e => { e.currentTarget.style.backgroundColor = "#fff"; e.currentTarget.style.borderColor = A.border; }}
+          >
+            <Icon size={15} color={A.t5} />{label}
+          </button>
+        ))}
       </div>
+
+      <style>{`@keyframes spin { to { transform: rotate(360deg); }}`}</style>
     </div>
   );
 }
