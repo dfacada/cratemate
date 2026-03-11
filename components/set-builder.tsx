@@ -81,7 +81,7 @@ export default function SetBuilder() {
                         <p style={{ fontSize:11, fontWeight:600, color:A.t1, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{t.artist}</p>
                         <p style={{ fontSize:10, color:A.t4, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{t.title}</p>
                         <div style={{ display:"flex", alignItems:"center", gap:6, marginTop:6 }}>
-                          <PlayButton track={{ id:t.id, artist:t.artist, title:t.title, bpm:t.bpm, energy:t.energy }} size="sm" />
+                          <PlayButton track={{ id:t.id, artist:t.artist, title:t.title, bpm:t.bpm, energy:t.energy }} size={24} />
                           <span style={{ fontFamily:"monospace", fontSize:9, color:A.t5 }}>{t.bpm}</span>
                           <span style={{ fontFamily:"monospace", fontSize:9, color: t.energy>=8?"#f97316":A.accent }}>{t.energy}</span>
                         </div>

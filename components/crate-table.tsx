@@ -73,7 +73,7 @@ export default function CrateTable({ tracks = mockTracks.slice(0,8), onBuildSet,
                 onMouseLeave={e => e.currentTarget.style.backgroundColor="transparent"}>
                 <td style={{ ...tdStyle, color:A.t5, fontFamily:"monospace", fontSize:11 }}>{i+1}</td>
                 <td style={{ ...tdStyle, paddingLeft:8, paddingRight:0 }}>
-                  <PlayButton track={{ id:t.id, artist:t.artist, title:t.title, label:t.label, bpm:t.bpm, key:t.key, energy:t.energy, duration:t.duration }} />
+                  <PlayButton track={{ id:t.id, artist:t.artist, title:t.title, label:t.label, bpm:t.bpm, key:t.key, energy:t.energy }} />
                 </td>
                 <td style={{ ...tdStyle, fontWeight:600, color:A.t1 }}>{t.artist}</td>
                 <td style={tdStyle}><span style={{ color:"#475569" }}>{t.title}</span><span style={{ marginLeft:8, fontSize:11, color:A.t5 }}>{t.duration}</span></td>

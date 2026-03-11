@@ -1,30 +1,59 @@
 "use client";
-import { Play, Pause } from "lucide-react";
+import { Play, Pause, Loader2 } from "lucide-react";
 import { usePlayer, PlayerTrack } from "@/context/player-context";
 
-export default function PlayButton({ track, size = "sm" }: { track: PlayerTrack; size?: "sm" | "md" }) {
-  const { currentTrack, isPlaying, play, pause, resume } = usePlayer();
+export default function PlayButton({ track, size = 28 }: { track: PlayerTrack; size?: number }) {
+  const { currentTrack, isPlaying, isLoading, play, pause, resume } = usePlayer();
   const isThis = currentTrack?.id === track.id;
-  const playing = isThis && isPlaying;
-  const dim = size === "sm" ? 24 : 30;
-  const iconSize = size === "sm" ? 9 : 12;
+  const thisLoading = isThis && isLoading;
+  const thisPlaying = isThis && isPlaying;
+
+  const handleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (thisLoading) return;
+    if (thisPlaying) { pause(); return; }
+    if (isThis && !isPlaying) { resume(); return; }
+    play(track);
+  };
+
+  const iconSize = Math.round(size * 0.45);
+  const accent = "#00B4D8";
 
   return (
     <button
-      onClick={e => { e.stopPropagation(); isThis ? (isPlaying ? pause() : resume()) : play(track); }}
-      title={playing ? "Pause" : `Play ${track.artist} — ${track.title}`}
-      style={{ width:dim, height:dim, borderRadius:"50%", border:"none", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, transition:"all 0.15s",
-        backgroundColor: playing ? "#00B4D8" : "#f1f5f9",
-        color: playing ? "#fff" : "#64748b",
-        boxShadow: playing ? "0 2px 8px rgba(0,180,216,0.35)" : "none",
-        transform: playing ? "scale(1.1)" : "scale(1)",
+      onClick={handleClick}
+      title={thisPlaying ? "Pause" : "Play preview"}
+      style={{
+        width: size, height: size, borderRadius: "50%", flexShrink: 0,
+        border: `1.5px solid ${isThis ? accent : "#e2e8f0"}`,
+        backgroundColor: isThis ? (thisPlaying ? accent : "rgba(0,180,216,0.08)") : "transparent",
+        cursor: thisLoading ? "wait" : "pointer",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        color: isThis ? accent : "#94a3b8",
+        transition: "all 0.15s",
       }}
-      onMouseEnter={e => { if (!playing) { e.currentTarget.style.backgroundColor = "#00B4D8"; e.currentTarget.style.color = "#fff"; }}}
-      onMouseLeave={e => { if (!playing) { e.currentTarget.style.backgroundColor = "#f1f5f9"; e.currentTarget.style.color = "#64748b"; }}}
+      onMouseEnter={e => {
+        if (!isThis) {
+          e.currentTarget.style.borderColor = accent;
+          e.currentTarget.style.backgroundColor = "rgba(0,180,216,0.06)";
+          e.currentTarget.style.color = accent;
+        }
+      }}
+      onMouseLeave={e => {
+        if (!isThis) {
+          e.currentTarget.style.borderColor = "#e2e8f0";
+          e.currentTarget.style.backgroundColor = "transparent";
+          e.currentTarget.style.color = "#94a3b8";
+        }
+      }}
     >
-      {playing
-        ? <Pause size={iconSize} style={{ fill:"currentColor" }} />
-        : <Play size={iconSize} style={{ fill:"currentColor", marginLeft:1 }} />}
+      {thisLoading
+        ? <Loader2 size={iconSize} style={{ animation: "spin 0.7s linear infinite" }} />
+        : thisPlaying
+        ? <Pause size={iconSize} fill="currentColor" />
+        : <Play  size={iconSize} fill="currentColor" style={{ marginLeft: 1 }} />
+      }
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </button>
   );
 }
