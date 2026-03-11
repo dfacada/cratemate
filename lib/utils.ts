@@ -6,18 +6,18 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function energyColor(energy: number): string {
-  if (energy <= 3) return "#3B82F6";
-  if (energy <= 5) return "#D45A00";
-  if (energy <= 7) return "#B84800";
-  if (energy <= 9) return "#EF4444";
-  return "#DC2626";
+  if (energy <= 3) return "text-blue-400";
+  if (energy <= 5) return "text-cyan-500";
+  if (energy <= 7) return "text-cyan-600";
+  if (energy <= 9) return "text-orange-500";
+  return "text-red-500";
 }
 
 export function gemScoreColor(score: number): string {
-  if (score >= 90) return "#D45A00";
-  if (score >= 75) return "#B84800";
-  if (score >= 60) return "#D97706";
-  return "#7A7A84";
+  if (score >= 90) return "text-cyan-600";
+  if (score >= 75) return "text-cyan-500";
+  if (score >= 60) return "text-amber-500";
+  return "text-slate-400";
 }
 
 export function confidenceLabel(confidence: number): "high" | "medium" | "low" {

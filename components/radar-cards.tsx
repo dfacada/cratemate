@@ -1,87 +1,100 @@
 "use client";
+
 import { useState } from "react";
 import { Radio, Plus, ExternalLink, Zap, RefreshCw, Loader2 } from "lucide-react";
-import { energyColor } from "@/lib/utils";
+import { cn, energyColor } from "@/lib/utils";
 import { mockRadarTracks } from "@/data/mockCrate";
 
-const P = { panel:"#C8C8CC", panel2:"#BCBCC0", border:"rgba(0,0,0,0.09)", t1:"#111112", t2:"#3A3A42", t3:"#5A5A64", t4:"#7A7A84", t5:"#9A9AA4", accent:"#D45A00" };
+type RadarSource = "all" | "soundcloud" | "bandcamp" | "dj_charts";
+const SOURCE_FILTERS: { label: string; value: RadarSource }[] = [
+  { label: "All Signals", value: "all" }, { label: "SoundCloud", value: "soundcloud" },
+  { label: "Bandcamp", value: "bandcamp" }, { label: "DJ Charts", value: "dj_charts" },
+];
+
+function UndergroundScore({ score }: { score: number }) {
+  return (
+    <div className="relative flex h-10 w-10 items-center justify-center">
+      {score >= 85 && <div className="absolute inset-0 animate-ping rounded-full bg-cyan-400/20" style={{ animationDuration: "2s" }} />}
+      <div className="relative flex h-8 w-8 items-center justify-center rounded-full bg-cyan-500/10 ring-1 ring-cyan-500/30">
+        <span className="font-mono text-[10px] font-bold text-cyan-600">{score}</span>
+      </div>
+    </div>
+  );
+}
 
 export default function RadarCards() {
-  const [filter, setFilter] = useState("all");
+  const [sourceFilter, setSourceFilter] = useState<RadarSource>("all");
   const [refreshing, setRefreshing] = useState(false);
-  const [added, setAdded] = useState<Set<string>>(new Set());
+  const [addedIds, setAddedIds] = useState<Set<string>>(new Set());
 
-  const tracks = mockRadarTracks.filter(t => {
-    if (filter==="all") return true;
-    if (filter==="soundcloud") return t.source.toLowerCase().includes("soundcloud");
-    if (filter==="bandcamp") return t.source.toLowerCase().includes("bandcamp");
-    if (filter==="charts") return t.source.toLowerCase().includes("chart");
+  const filtered = mockRadarTracks.filter((t) => {
+    if (sourceFilter === "all") return true;
+    if (sourceFilter === "soundcloud") return t.source.toLowerCase().includes("soundcloud");
+    if (sourceFilter === "bandcamp") return t.source.toLowerCase().includes("bandcamp");
+    if (sourceFilter === "dj_charts") return t.source.toLowerCase().includes("dj chart");
     return true;
   });
 
-  const handleRefresh = async () => { setRefreshing(true); await new Promise(r=>setTimeout(r,2000)); setRefreshing(false); };
-
-  const filters = [["all","All"],["soundcloud","SoundCloud"],["bandcamp","Bandcamp"],["charts","DJ Charts"]];
-
   return (
-    <div style={{ display:"flex",flexDirection:"column",gap:16 }}>
-      <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:12 }}>
-        <div style={{ display:"flex",alignItems:"center",gap:10 }}>
-          <div style={{ width:32,height:32,borderRadius:8,backgroundColor:"rgba(212,90,0,0.10)",border:"1px solid rgba(212,90,0,0.20)",display:"flex",alignItems:"center",justifyContent:"center" }}>
-            <Radio size={15} style={{ color:P.accent }}/>
-          </div>
+    <div className="space-y-5">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-cyan-500/10 ring-1 ring-cyan-500/20"><Radio className="h-4 w-4 text-cyan-500" /></div>
           <div>
-            <p style={{ fontSize:13,fontWeight:600,color:P.t1,margin:0 }}>Underground Radar</p>
-            <p style={{ fontSize:11,color:P.t5,marginTop:1 }}>Live signal detection · Updated hourly</p>
+            <h2 className="text-sm font-semibold text-slate-800">Underground Radar</h2>
+            <p className="text-xs text-slate-500">Live signal detection · Updated hourly</p>
           </div>
         </div>
-        <div style={{ display:"flex",alignItems:"center",gap:8 }}>
-          <div style={{ display:"flex",borderRadius:8,border:`1px solid ${P.border}`,backgroundColor:"rgba(0,0,0,0.05)",padding:2 }}>
-            {filters.map(([val,label]) => (
-              <button key={val} onClick={()=>setFilter(val)} style={{ padding:"4px 12px",borderRadius:6,fontSize:12,border:"none",backgroundColor:filter===val?"rgba(0,0,0,0.10)":"transparent",color:filter===val?P.t1:P.t4,cursor:"pointer",fontWeight:filter===val?600:400 }}>{label}</button>
+        <div className="flex items-center gap-2">
+          <div className="flex rounded-lg border border-slate-200 bg-slate-50 p-0.5">
+            {SOURCE_FILTERS.map((f) => (
+              <button key={f.value} onClick={() => setSourceFilter(f.value)}
+                className={cn("rounded-md px-3 py-1 text-xs transition",
+                  sourceFilter === f.value ? "bg-white text-slate-800 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                )}>{f.label}</button>
             ))}
           </div>
-          <button onClick={handleRefresh} disabled={refreshing} style={{ width:32,height:32,display:"flex",alignItems:"center",justifyContent:"center",borderRadius:8,border:`1px solid ${P.border}`,backgroundColor:"rgba(0,0,0,0.05)",cursor:"pointer",color:P.t4 }}>
-            {refreshing ? <Loader2 size={14} style={{ animation:"spin 1s linear infinite" }}/> : <RefreshCw size={14}/>}
+          <button onClick={async () => { setRefreshing(true); await new Promise(r => setTimeout(r, 1500)); setRefreshing(false); }}
+            disabled={refreshing}
+            className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:bg-slate-50 hover:text-slate-700 disabled:opacity-50">
+            {refreshing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
           </button>
         </div>
       </div>
 
-      <div style={{ display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:12 }}>
-        {tracks.map(t => (
-          <div key={t.id} style={{ borderRadius:12,border:`1px solid ${P.border}`,backgroundColor:P.panel,padding:16 }}>
-            <div style={{ display:"flex",alignItems:"flex-start",gap:12 }}>
-              <div style={{ position:"relative",width:40,height:40,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center" }}>
-                <div style={{ position:"absolute",inset:0,borderRadius:"50%",backgroundColor:"rgba(212,90,0,0.12)",border:"1px solid rgba(212,90,0,0.25)" }}/>
-                <span style={{ position:"relative",fontFamily:"monospace",fontSize:10,fontWeight:700,color:P.accent }}>{t.undergroundScore}</span>
-              </div>
-              <div style={{ flex:1,minWidth:0 }}>
-                <div style={{ display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:8 }}>
+      <div className="grid gap-3 sm:grid-cols-2">
+        {filtered.map((track) => (
+          <div key={track.id} className="group rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-cyan-200 hover:shadow-md hover:shadow-cyan-500/5">
+            <div className="flex items-start gap-3">
+              <UndergroundScore score={track.undergroundScore} />
+              <div className="min-w-0 flex-1">
+                <div className="flex items-start justify-between gap-2">
                   <div>
-                    <p style={{ fontSize:14,fontWeight:700,color:P.t1,margin:0 }}>{t.artist}</p>
-                    <p style={{ fontSize:13,color:P.t3,marginTop:2 }}>{t.title}</p>
+                    <p className="font-display font-semibold text-slate-800">{track.artist}</p>
+                    <p className="text-sm text-slate-500">{track.title}</p>
                   </div>
-                  <div style={{ display:"flex",gap:4,flexShrink:0 }}>
-                    <button onClick={()=>setAdded(p=>new Set([...p,t.id]))} disabled={added.has(t.id)} style={{ width:28,height:28,display:"flex",alignItems:"center",justifyContent:"center",borderRadius:6,border:`1px solid ${P.border}`,backgroundColor:added.has(t.id)?"rgba(212,90,0,0.10)":"rgba(0,0,0,0.05)",cursor:"pointer",color:added.has(t.id)?P.accent:P.t4 }}>
-                      <Plus size={13}/>
-                    </button>
-                    <button style={{ width:28,height:28,display:"flex",alignItems:"center",justifyContent:"center",borderRadius:6,border:`1px solid ${P.border}`,backgroundColor:"rgba(0,0,0,0.05)",cursor:"pointer",color:P.t4 }}>
-                      <ExternalLink size={12}/>
+                  <div className="flex shrink-0 gap-1">
+                    <button onClick={() => setAddedIds((p) => new Set([...p, track.id]))} disabled={addedIds.has(track.id)}
+                      className={cn("flex h-7 w-7 items-center justify-center rounded-lg transition",
+                        addedIds.has(track.id) ? "bg-cyan-50 text-cyan-500" : "bg-slate-100 text-slate-500 hover:bg-cyan-50 hover:text-cyan-600"
+                      )}><Plus className="h-3.5 w-3.5" /></button>
+                    <button className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 text-slate-400 transition hover:bg-slate-200">
+                      <ExternalLink className="h-3 w-3" />
                     </button>
                   </div>
                 </div>
-                <div style={{ display:"flex",alignItems:"center",flexWrap:"wrap",gap:8,marginTop:8,fontSize:11 }}>
-                  <span style={{ fontFamily:"monospace",color:P.t4 }}>{t.bpm} BPM</span>
-                  <span style={{ color:P.t5 }}>·</span>
-                  <span style={{ fontFamily:"monospace",color:P.t4 }}>{t.key}</span>
-                  <span style={{ color:P.t5 }}>·</span>
-                  <span style={{ display:"flex",alignItems:"center",gap:2,fontFamily:"monospace",color:energyColor(t.energy) }}><Zap size={10}/>{t.energy}</span>
-                  <span style={{ padding:"1px 6px",borderRadius:999,backgroundColor:"rgba(212,90,0,0.10)",color:P.accent,fontSize:10 }}>{t.source}</span>
+                <div className="mt-2 flex flex-wrap items-center gap-2 text-[10px]">
+                  <span className="font-mono text-slate-400">{track.bpm} BPM</span>
+                  <span className="text-slate-300">·</span>
+                  <span className="font-mono text-slate-400">{track.key}</span>
+                  <span className="text-slate-300">·</span>
+                  <span className={cn("font-mono", energyColor(track.energy))}><Zap className="mr-0.5 inline-block h-2.5 w-2.5" />{track.energy}</span>
+                  <span className="rounded-full bg-cyan-50 px-1.5 py-0.5 text-cyan-600">{track.source}</span>
                 </div>
-                <p style={{ marginTop:8,padding:"8px 10px",borderRadius:6,backgroundColor:"rgba(0,0,0,0.05)",fontSize:12,color:P.t3,lineHeight:1.5 }}>{t.reason}</p>
-                <div style={{ display:"flex",justifyContent:"space-between",marginTop:8,fontSize:11,color:P.t5 }}>
-                  <span>{t.signalCount} signals</span>
-                  <span>{t.detectedAt}</span>
+                <p className="mt-2.5 rounded-lg bg-slate-50 px-2.5 py-2 text-xs leading-relaxed text-slate-500">{track.reason}</p>
+                <div className="mt-2 flex items-center justify-between text-[10px] text-slate-400">
+                  <span>{track.signalCount} signals detected</span>
+                  <span>Detected {track.detectedAt}</span>
                 </div>
               </div>
             </div>

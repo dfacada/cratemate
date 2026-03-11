@@ -3,31 +3,27 @@
 @tailwind utilities;
 
 :root {
-  --bg-base: #DCDCDF;
-  --bg-panel: #C8C8CC;
-  --bg-sidebar: #BCBCC0;
-  --accent: #D45A00;
-  --text-primary: #111112;
-  --text-secondary: #3A3A42;
-  --text-muted: #6E6E78;
-  --text-faint: #9A9AA4;
-  --border: rgba(0,0,0,0.10);
+  --bg-base: #F8FAFC;
+  --bg-panel: #FFFFFF;
+  --accent: #00B4D8;
+  --font-display: 'Space Grotesk', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
 }
 
 * { box-sizing: border-box; }
 
 body {
-  background-color: var(--bg-base);
-  color: var(--text-primary);
-  font-family: 'Space Grotesk', sans-serif;
+  background-color: #F0F4F8;
+  color: #0A0F1E;
 }
 
 ::-webkit-scrollbar { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.25); }
+::-webkit-scrollbar-thumb { background: rgba(0,180,216,0.25); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(0,180,216,0.45); }
 
-::selection { background: rgba(212,90,0,0.2); color: #111112; }
-:focus-visible { outline: 2px solid rgba(212,90,0,0.5); outline-offset: 2px; }
+.font-display { font-family: var(--font-display, 'Space Grotesk', sans-serif); }
+.font-mono { font-family: var(--font-mono, 'JetBrains Mono', monospace); }
 
-a { color: inherit; text-decoration: none; }
+::selection { background: rgba(0,180,216,0.2); color: #0A0F1E; }
+:focus-visible { outline: 2px solid rgba(0,180,216,0.6); outline-offset: 2px; }

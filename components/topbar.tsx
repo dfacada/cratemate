@@ -1,44 +1,66 @@
 "use client";
+
 import { Search, Bell, ChevronDown, Archive } from "lucide-react";
 import { useState } from "react";
 import { mockCrates } from "@/data/mockCrate";
 
 export default function Topbar() {
   const [activeCrate, setActiveCrate] = useState(mockCrates[0]);
-  const [open, setOpen] = useState(false);
+  const [crateOpen, setCrateOpen] = useState(false);
+
   return (
-    <header style={{ position:"fixed",top:0,right:0,left:224,height:56,display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 24px",backgroundColor:"rgba(200,200,204,0.92)",borderBottom:"1px solid rgba(0,0,0,0.10)",backdropFilter:"blur(8px)",zIndex:30 }}>
-      <div style={{ position:"relative",flex:1,maxWidth:360 }}>
-        <Search size={14} style={{ position:"absolute",left:10,top:"50%",transform:"translateY(-50%)",color:"#9A9AA4" }} />
-        <input placeholder="Search tracks, artists, labels…" style={{ width:"100%",height:32,paddingLeft:32,paddingRight:40,borderRadius:6,border:"1px solid rgba(0,0,0,0.12)",backgroundColor:"rgba(0,0,0,0.05)",fontSize:13,color:"#111112",outline:"none" }} />
-        <kbd style={{ position:"absolute",right:8,top:"50%",transform:"translateY(-50%)",fontSize:9,color:"#9A9AA4",border:"1px solid rgba(0,0,0,0.10)",borderRadius:3,padding:"1px 4px",fontFamily:"monospace" }}>⌘K</kbd>
+    <header className="fixed top-0 right-0 left-56 z-30 flex h-14 items-center justify-between border-b border-slate-200 bg-white/90 px-6 backdrop-blur-sm shadow-sm">
+      <div className="relative flex-1 max-w-sm">
+        <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+        <input
+          type="text"
+          placeholder="Search tracks, artists, labels…"
+          className="h-8 w-full rounded-lg border border-slate-200 bg-slate-50 pl-8 pr-3 text-sm text-slate-700 placeholder-slate-400 outline-none transition focus:border-cyan-400 focus:bg-white focus:ring-2 focus:ring-cyan-500/20"
+        />
+        <kbd className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded border border-slate-200 bg-slate-100 px-1.5 py-0.5 font-mono text-[9px] text-slate-400">
+          ⌘K
+        </kbd>
       </div>
 
-      <div style={{ display:"flex",alignItems:"center",gap:10 }}>
-        <div style={{ position:"relative" }}>
-          <button onClick={() => setOpen(!open)} style={{ display:"flex",alignItems:"center",gap:6,padding:"6px 12px",borderRadius:6,border:"1px solid rgba(0,0,0,0.12)",backgroundColor:"rgba(0,0,0,0.05)",fontSize:13,color:"#111112",cursor:"pointer" }}>
-            <Archive size={14} style={{ color:"#D45A00" }} />
-            <span style={{ maxWidth:140,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>{activeCrate.name}</span>
-            <ChevronDown size={12} style={{ color:"#7A7A84" }} />
+      <div className="flex items-center gap-3">
+        <div className="relative">
+          <button
+            onClick={() => setCrateOpen(!crateOpen)}
+            className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm text-slate-700 transition hover:border-slate-300 hover:bg-white"
+          >
+            <Archive className="h-3.5 w-3.5 text-cyan-500" />
+            <span className="max-w-[140px] truncate">{activeCrate.name}</span>
+            <ChevronDown className="h-3 w-3 text-slate-400" />
           </button>
-          {open && (
-            <div style={{ position:"absolute",right:0,top:"calc(100% + 4px)",width:224,borderRadius:8,border:"1px solid rgba(0,0,0,0.12)",backgroundColor:"#BCBCC0",padding:"4px 0",boxShadow:"0 8px 24px rgba(0,0,0,0.10)",zIndex:50 }}>
-              <p style={{ padding:"6px 12px",fontSize:10,fontWeight:600,textTransform:"uppercase",letterSpacing:"0.08em",color:"#7A7A84" }}>Your Crates</p>
-              {mockCrates.map(c => (
-                <button key={c.id} onClick={() => { setActiveCrate(c); setOpen(false); }} style={{ display:"flex",width:"100%",alignItems:"center",gap:10,padding:"8px 12px",fontSize:13,color:"#3A3A42",backgroundColor:"transparent",border:"none",cursor:"pointer",textAlign:"left" }}>
-                  <span style={{ width:8,height:8,borderRadius:"50%",backgroundColor:c.color,flexShrink:0 }} />
-                  <span style={{ flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>{c.name}</span>
-                  <span style={{ fontSize:11,color:"#9A9AA4" }}>{c.trackIds.length}</span>
+
+          {crateOpen && (
+            <div className="absolute right-0 mt-1 w-56 rounded-xl border border-slate-200 bg-white py-1 shadow-xl shadow-slate-200/80">
+              <p className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">
+                Your Crates
+              </p>
+              {mockCrates.map((crate) => (
+                <button
+                  key={crate.id}
+                  onClick={() => { setActiveCrate(crate); setCrateOpen(false); }}
+                  className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
+                >
+                  <span className="h-2 w-2 rounded-full" style={{ backgroundColor: crate.color }} />
+                  <span className="flex-1 truncate">{crate.name}</span>
+                  <span className="text-xs text-slate-400">{crate.trackIds.length}</span>
                 </button>
               ))}
             </div>
           )}
         </div>
-        <button style={{ width:32,height:32,display:"flex",alignItems:"center",justifyContent:"center",borderRadius:6,border:"1px solid rgba(0,0,0,0.12)",backgroundColor:"rgba(0,0,0,0.05)",cursor:"pointer",position:"relative" }}>
-          <Bell size={14} style={{ color:"#7A7A84" }} />
-          <span style={{ position:"absolute",top:0,right:0,width:8,height:8,borderRadius:"50%",backgroundColor:"#D45A00" }} />
+
+        <button className="relative flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-slate-500 transition hover:border-slate-300 hover:bg-white hover:text-slate-700">
+          <Bell className="h-3.5 w-3.5" />
+          <span className="absolute -right-0.5 -top-0.5 flex h-2 w-2 rounded-full bg-cyan-500" />
         </button>
-        <button style={{ width:32,height:32,borderRadius:"50%",background:"linear-gradient(135deg, #D45A00, #A84500)",fontSize:11,fontWeight:700,color:"white",border:"2px solid rgba(212,90,0,0.25)",cursor:"pointer" }}>DJ</button>
+
+        <button className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-cyan-400 to-cyan-600 text-xs font-semibold text-white ring-2 ring-cyan-500/20">
+          DJ
+        </button>
       </div>
     </header>
   );

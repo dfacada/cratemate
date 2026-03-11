@@ -3,11 +3,11 @@ import Topbar from "@/components/topbar";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{ minHeight: "100vh", backgroundColor: "#DCDCDF" }}>
+    <div className="min-h-screen bg-[#F0F4F8]">
       <Sidebar />
       <Topbar />
-      <main style={{ marginLeft: 224, paddingTop: 56 }}>
-        <div style={{ minHeight: "calc(100vh - 56px)", padding: 24 }}>
+      <main className="ml-56 pt-14">
+        <div className="min-h-[calc(100vh-3.5rem)] p-6">
           {children}
         </div>
       </main>
