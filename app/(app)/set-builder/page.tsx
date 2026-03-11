@@ -1,14 +1,14 @@
+"use client";
 import SetBuilder from "@/components/set-builder";
-
-const P = { t1:"#111112", t4:"#7A7A84" };
+const A = { t1:"#0f172a", t4:"#64748b" };
 export default function SetBuilderPage() {
   return (
-    <div style={{ display:"flex",flexDirection:"column",gap:20 }}>
+    <div style={{ display:"flex", flexDirection:"column", gap:20 }}>
       <div>
-        <h1 style={{ fontSize:22,fontWeight:700,color:P.t1,margin:0 }}>Set Builder</h1>
-        <p style={{ fontSize:13,color:P.t4,marginTop:4 }}>Arrange your crate into a structured DJ set with AI-assisted arc building</p>
+        <h1 style={{ fontSize:22, fontWeight:700, color:A.t1, letterSpacing:"-0.02em" }}>Set Builder</h1>
+        <p style={{ fontSize:13, color:A.t4, marginTop:4 }}>Arrange your crate tracks into a curated DJ set.</p>
       </div>
-      <SetBuilder/>
+      <SetBuilder />
     </div>
   );
 }
