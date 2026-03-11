@@ -29,7 +29,7 @@ const ConfidenceBadge = ({ value }: { value: number }) => {
   return (
     <div className="flex items-center gap-1.5">
       {level === "high" ? (
-        <CheckCircle className="h-3.5 w-3.5 text-orange-600" />
+        <CheckCircle className="h-3.5 w-3.5 text-teal-400" />
       ) : level === "medium" ? (
         <AlertTriangle className="h-3.5 w-3.5 text-yellow-400" />
       ) : (
@@ -38,7 +38,7 @@ const ConfidenceBadge = ({ value }: { value: number }) => {
       <span
         className={cn(
           "text-xs font-mono",
-          level === "high" ? "text-orange-600" : level === "medium" ? "text-yellow-400" : "text-red-400"
+          level === "high" ? "text-teal-400" : level === "medium" ? "text-yellow-400" : "text-red-400"
         )}
       >
         {pct}%
@@ -85,7 +85,7 @@ export default function OcrReviewTable({ tracks = mockOcrTracks, onConfirm }: Oc
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-sm font-semibold text-white">OCR Extraction Review</h3>
-          <p className="text-xs text-[#72727E]">
+          <p className="text-xs text-zinc-500">
             {rows.length} tracks detected
             {lowConfidenceCount > 0 && (
               <span className="ml-2 text-yellow-400">
@@ -97,14 +97,14 @@ export default function OcrReviewTable({ tracks = mockOcrTracks, onConfirm }: Oc
         <div className="flex gap-2">
           <button
             onClick={() => rows.forEach((r) => r.confidence < 0.8 && rerunOcr(r.id))}
-            className="flex items-center gap-1.5 rounded-md border border-black/10 bg-black/4 px-3 py-1.5 text-xs text-[#4A4A58] transition hover:bg-black/7 hover:text-[#111114]"
+            className="flex items-center gap-1.5 rounded-md border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-zinc-400 transition hover:bg-white/10 hover:text-white"
           >
             <RefreshCw className="h-3 w-3" />
             Re-run OCR
           </button>
           <button
             onClick={() => onConfirm?.(rows)}
-            className="flex items-center gap-1.5 rounded-md bg-orange-500/15 px-3 py-1.5 text-xs font-medium text-orange-700 ring-1 ring-orange-500/25 transition hover:bg-orange-500/30"
+            className="flex items-center gap-1.5 rounded-md bg-teal-500/20 px-3 py-1.5 text-xs font-medium text-teal-300 ring-1 ring-teal-500/30 transition hover:bg-teal-500/30"
           >
             <CheckCircle className="h-3 w-3" />
             Confirm Playlist
@@ -113,12 +113,12 @@ export default function OcrReviewTable({ tracks = mockOcrTracks, onConfirm }: Oc
       </div>
 
       {/* Table */}
-      <div className="overflow-hidden rounded-xl border border-black/9 bg-[#D4D4DA]">
+      <div className="overflow-hidden rounded-xl border border-white/8 bg-[#15151B]">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-black/7">
+            <tr className="border-b border-white/6">
               {["#", "Artist", "Track", "Label", "Year", "Confidence", ""].map((h) => (
-                <th key={h} className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-widest text-[#9595A0]">
+                <th key={h} className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-widest text-zinc-600">
                   {h}
                 </th>
               ))}
@@ -133,20 +133,20 @@ export default function OcrReviewTable({ tracks = mockOcrTracks, onConfirm }: Oc
                   key={row.id}
                   className={cn(
                     "group transition-colors",
-                    level === "low" ? "bg-red-100 hover:bg-red-50" : "hover:bg-black/2"
+                    level === "low" ? "bg-red-500/3 hover:bg-red-500/6" : "hover:bg-white/2"
                   )}
                 >
-                  <td className="w-10 px-4 py-3 font-mono text-xs text-[#9595A0]">{i + 1}</td>
+                  <td className="w-10 px-4 py-3 font-mono text-xs text-zinc-600">{i + 1}</td>
 
                   <td className="px-4 py-3">
                     {isEditing ? (
                       <input
                         value={editData.artist ?? ""}
                         onChange={(e) => setEditData({ ...editData, artist: e.target.value })}
-                        className="w-full rounded bg-black/6 px-2 py-1 text-sm text-[#111114] outline-none focus:ring-1 focus:ring-orange-500/30"
+                        className="w-full rounded bg-white/8 px-2 py-1 text-sm text-white outline-none focus:ring-1 focus:ring-teal-500/40"
                       />
                     ) : (
-                      <span className="font-medium text-[#1E1E26]">{row.artist}</span>
+                      <span className="font-medium text-zinc-200">{row.artist}</span>
                     )}
                   </td>
 
@@ -155,15 +155,15 @@ export default function OcrReviewTable({ tracks = mockOcrTracks, onConfirm }: Oc
                       <input
                         value={editData.title ?? ""}
                         onChange={(e) => setEditData({ ...editData, title: e.target.value })}
-                        className="w-full rounded bg-black/6 px-2 py-1 text-sm text-[#111114] outline-none focus:ring-1 focus:ring-orange-500/30"
+                        className="w-full rounded bg-white/8 px-2 py-1 text-sm text-white outline-none focus:ring-1 focus:ring-teal-500/40"
                       />
                     ) : (
-                      <span className="text-[#2E2E38]">{row.title}</span>
+                      <span className="text-zinc-300">{row.title}</span>
                     )}
                   </td>
 
-                  <td className="px-4 py-3 text-xs text-[#72727E]">{row.label}</td>
-                  <td className="px-4 py-3 font-mono text-xs text-[#9595A0]">{row.year}</td>
+                  <td className="px-4 py-3 text-xs text-zinc-500">{row.label}</td>
+                  <td className="px-4 py-3 font-mono text-xs text-zinc-600">{row.year}</td>
 
                   <td className="px-4 py-3">
                     <ConfidenceBadge value={row.confidence} />
@@ -174,7 +174,7 @@ export default function OcrReviewTable({ tracks = mockOcrTracks, onConfirm }: Oc
                       {isEditing ? (
                         <button
                           onClick={() => saveEdit(row.id)}
-                          className="rounded px-2 py-1 text-xs font-medium text-orange-600 hover:bg-orange-500/10"
+                          className="rounded px-2 py-1 text-xs font-medium text-teal-400 hover:bg-teal-500/10"
                         >
                           Save
                         </button>
@@ -182,19 +182,19 @@ export default function OcrReviewTable({ tracks = mockOcrTracks, onConfirm }: Oc
                         <>
                           <button
                             onClick={() => startEdit(row)}
-                            className="flex h-6 w-6 items-center justify-center rounded text-[#9595A0] hover:bg-black/6 hover:text-[#2E2E38]"
+                            className="flex h-6 w-6 items-center justify-center rounded text-zinc-600 hover:bg-white/8 hover:text-zinc-300"
                           >
                             <Edit2 className="h-3 w-3" />
                           </button>
                           <button
                             onClick={() => rerunOcr(row.id)}
-                            className="flex h-6 w-6 items-center justify-center rounded text-[#9595A0] hover:bg-black/6 hover:text-[#2E2E38]"
+                            className="flex h-6 w-6 items-center justify-center rounded text-zinc-600 hover:bg-white/8 hover:text-zinc-300"
                           >
                             <RefreshCw className="h-3 w-3" />
                           </button>
                           <button
                             onClick={() => removeRow(row.id)}
-                            className="flex h-6 w-6 items-center justify-center rounded text-[#9595A0] hover:bg-red-500/10 hover:text-red-400"
+                            className="flex h-6 w-6 items-center justify-center rounded text-zinc-600 hover:bg-red-500/10 hover:text-red-400"
                           >
                             <Trash2 className="h-3 w-3" />
                           </button>
