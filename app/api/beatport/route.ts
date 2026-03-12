@@ -12,16 +12,10 @@ async function refreshToken(refreshToken: string): Promise<{
 } | null> {
   // Scrape the public client_id Beatport uses for their own docs/swagger UI
   // This is the same workaround used by beets-beatport4
+  // client_id confirmed from Beatport docs OAuth flow
+  const clientId = "0GIvkCltVIuPkkwSJHp6NDb3s0potTjLBQr388Dd";
+
   try {
-    const docsHtml = await fetch(`${BP_BASE}/docs/`, {
-      headers: { "User-Agent": "Mozilla/5.0" },
-      signal: AbortSignal.timeout(5000),
-    }).then(r => r.text());
-
-    const match = docsHtml.match(/"clientId"\s*:\s*"([^"]+)"/);
-    if (!match) return null;
-    const clientId = match[1];
-
     const res = await fetch(`${BP_BASE}/auth/o/token/`, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
