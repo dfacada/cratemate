@@ -131,6 +131,10 @@ CRITICAL RULES for recommendations:
     return NextResponse.json(parsed);
   } catch (e: any) {
     console.error("Analyze error:", e);
-    return NextResponse.json({ error: e.message || "Analysis failed" }, { status: 500 });
+    const msg = e.message || "";
+    const friendlyError = msg.includes("apiKey") || msg.includes("authToken") || msg.includes("authentication")
+      ? "ANTHROPIC_API_KEY is not set in Vercel environment variables. Add it at vercel.com → Project → Settings → Environment Variables."
+      : msg || "Analysis failed";
+    return NextResponse.json({ error: friendlyError }, { status: 500 });
   }
 }
