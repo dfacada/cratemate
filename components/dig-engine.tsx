@@ -233,6 +233,7 @@ export default function DigEngine() {
   const [playlistName, setPlaylistName] = useState<string>("");
   const [result,       setResult]       = useState<AnalyzeResponse | null>(null);
   const [error,        setError]        = useState<string | null>(null);
+  const [progress,     setProgress]     = useState(0);
   const [addedIdxs,    setAddedIdxs]    = useState<Set<number>>(new Set());
   const [showAll,      setShowAll]      = useState(false);
 
@@ -278,6 +279,14 @@ export default function DigEngine() {
   const runAnalysis = async (trackList: TrackInput[], name: string) => {
     setLoadingMsg(`Analyzing ${trackList.length} tracks…`);
     setError(null);
+    setProgress(0);
+
+    // Fake progress: fast early, asymptotically approaches 92%, jumps to 100 on done
+    let pct = 0;
+    const tick = setInterval(() => {
+      pct = pct + (92 - pct) * 0.045; // slows as it approaches 92
+      setProgress(Math.round(pct));
+    }, 300);
 
     try {
       setLoadingMsg("Claude is reading the vibe…");
@@ -293,9 +302,14 @@ export default function DigEngine() {
       }
 
       const data: AnalyzeResponse = await res.json();
+      clearInterval(tick);
+      setProgress(100);
+      await new Promise(r => setTimeout(r, 350)); // brief 100% flash
       setResult(data);
       setPhase("results");
     } catch (e: any) {
+      clearInterval(tick);
+      setProgress(0);
       setError(e.message);
       setPhase("input");
     }
@@ -449,21 +463,38 @@ export default function DigEngine() {
   // ── Analyzing phase ───────────────────────────────────────────────────────
   if (phase === "analyzing") {
     return (
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 20, minHeight: 300 }}>
-        <div style={{ width: 56, height: 56, borderRadius: "50%", backgroundColor: A.accentBg, border: `1px solid ${A.accentBorder}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <Loader2 size={24} color={A.accent} style={{ animation: "spin 0.7s linear infinite" }} />
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 24, minHeight: 340 }}>
+        {/* Circular progress */}
+        <div style={{ position: "relative", width: 96, height: 96 }}>
+          <svg width="96" height="96" style={{ transform: "rotate(-90deg)" }}>
+            <circle cx="48" cy="48" r="40" fill="none" stroke="#e2e8f0" strokeWidth="6" />
+            <circle
+              cx="48" cy="48" r="40" fill="none"
+              stroke={A.accent} strokeWidth="6"
+              strokeLinecap="round"
+              strokeDasharray={`${2 * Math.PI * 40}`}
+              strokeDashoffset={`${2 * Math.PI * 40 * (1 - progress / 100)}`}
+              style={{ transition: "stroke-dashoffset 0.4s ease" }}
+            />
+          </svg>
+          <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <span style={{ fontSize: 18, fontWeight: 800, color: A.t1, letterSpacing: "-0.03em" }}>{progress}%</span>
+          </div>
         </div>
+
         <div style={{ textAlign: "center" }}>
           <p style={{ fontSize: 15, fontWeight: 600, color: A.t1, marginBottom: 6 }}>Reading the vibe…</p>
           <p style={{ fontSize: 13, color: A.t4 }}>{loadingMsg}</p>
         </div>
-        <div style={{ width: 200, height: 3, borderRadius: 20, backgroundColor: "#e2e8f0", overflow: "hidden" }}>
-          <div style={{ height: "100%", borderRadius: 20, backgroundColor: A.accent, animation: "progress 2s ease-in-out infinite" }} />
+
+        {/* Track bar */}
+        <div style={{ width: 240 }}>
+          <div style={{ height: 4, borderRadius: 20, backgroundColor: "#e2e8f0", overflow: "hidden" }}>
+            <div style={{ height: "100%", borderRadius: 20, backgroundColor: A.accent, width: `${progress}%`, transition: "width 0.4s ease" }} />
+          </div>
         </div>
-        <style>{`
-          @keyframes spin { to { transform: rotate(360deg); } }
-          @keyframes progress { 0% { width: 0%; margin-left: 0; } 50% { width: 60%; margin-left: 20%; } 100% { width: 0%; margin-left: 100%; } }
-        `}</style>
+
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     );
   }
