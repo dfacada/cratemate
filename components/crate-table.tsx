@@ -15,7 +15,7 @@ const KEY_COLORS: Record<string, string> = {
 
 type SortKey = "artist" | "bpm" | "key" | "title";
 
-const A = { panel: "#fff", border: "#e2e8f0", t1: "#0f172a", t4: "#64748b", t5: "#94a3b8", accent: "#00B4D8" };
+const A = { panel: "#fff", border: "#e2e8f0", t1: "#0f172a", t4: "#64748b", t5: "#94a3b8", accent: "#00B4D8", accentBg: "rgba(0,180,216,0.09)" };
 
 interface CrateTableProps {
   /** Real crate tracks from localStorage — if provided, takes priority */
