@@ -78,13 +78,37 @@ export default function SoundCloudImport({ onTracks }: Props) {
             return;
           }
 
-          const tracks: TrackInput[] = sounds.map((s: any) => ({
-            artist: s.user?.username || s.publisher_metadata?.artist || "Unknown",
-            title:  s.title?.replace(/ - .*$/, "") || "Unknown", // strip " - Artist" suffixes
-            label:  s.label_name || s.publisher_metadata?.release_title || undefined,
-            year:   s.created_at ? new Date(s.created_at).getFullYear() : undefined,
-            bpm:    s.bpm || undefined,
-          }));
+          const tracks: TrackInput[] = sounds.map((s: any) => {
+            const rawTitle = s.title || "";
+            const rawUser  = s.user?.username || "";
+            const pubArtist = s.publisher_metadata?.artist || "";
+
+            // SC titles are often "Artist - Title" or "Artist — Title"
+            const dashMatch = rawTitle.match(/^(.+?)\s[-–—]\s(.+)$/);
+
+            let artist: string;
+            let title: string;
+
+            if (dashMatch) {
+              // Title contains "Artist - Track Name" → split it
+              artist = dashMatch[1].trim();
+              title  = dashMatch[2].trim();
+            } else if (pubArtist) {
+              artist = pubArtist;
+              title  = rawTitle;
+            } else {
+              artist = rawUser || "Unknown";
+              title  = rawTitle || "Unknown";
+            }
+
+            return {
+              artist,
+              title,
+              label: s.label_name || s.publisher_metadata?.release_title || undefined,
+              year:  s.created_at ? new Date(s.created_at).getFullYear() : undefined,
+              bpm:   s.bpm || undefined,
+            };
+          }).filter(t => t.artist !== "Unknown" || t.title !== "Unknown");
 
           setCount(tracks.length);
           setStatus("done");
