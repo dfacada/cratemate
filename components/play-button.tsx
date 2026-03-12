@@ -2,17 +2,38 @@
 import { Play, Square, Loader2 } from "lucide-react";
 import { usePlayer, PlayerTrack } from "@/context/player-context";
 
-export default function PlayButton({ track, size = 28 }: { track: PlayerTrack; size?: number }) {
-  const { currentTrack, status, play, stop } = usePlayer();
+interface PlayButtonProps {
+  track: PlayerTrack;
+  size?: number;
+  /** If provided, clicking play will load the full list as a queue starting from this track */
+  queueTracks?: PlayerTrack[];
+  queueIndex?: number;
+}
+
+export default function PlayButton({ track, size = 28, queueTracks, queueIndex }: PlayButtonProps) {
+  const { currentTrack, status, play, stop, playAll } = usePlayer();
   const isThis   = currentTrack?.id === track.id;
   const loading  = isThis && status === "loading";
   const active   = isThis && status === "ready";
   const accent   = "#00B4D8";
   const iconSize = Math.round(size * 0.42);
 
+  const handleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (loading) return;
+    if (active) {
+      stop();
+    } else if (queueTracks && queueIndex != null) {
+      // Play this track and load the full queue for next/prev
+      playAll(queueTracks, queueIndex);
+    } else {
+      play(track);
+    }
+  };
+
   return (
     <button
-      onClick={e => { e.stopPropagation(); loading ? null : active ? stop() : play(track); }}
+      onClick={handleClick}
       title={active ? "Close player" : "Play preview"}
       style={{
         width: size, height: size, borderRadius: "50%", flexShrink: 0,

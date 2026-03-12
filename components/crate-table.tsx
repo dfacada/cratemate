@@ -1,10 +1,11 @@
 "use client";
 import { useState } from "react";
-import { Trash2, Download, ListMusic, ArrowUpDown, Music2 } from "lucide-react";
+import { Trash2, Download, ListMusic, ArrowUpDown, Music2, PlayCircle } from "lucide-react";
 import { type CrateTrack } from "@/lib/crates";
 import { mockTracks } from "@/data/mockTracks";
 import { Track } from "@/types/track";
 import PlayButton from "@/components/play-button";
+import { usePlayer, PlayerTrack } from "@/context/player-context";
 
 const KEY_COLORS: Record<string, string> = {
   "1A": "#FF6B6B", "2A": "#FF8E53", "3A": "#FFC300", "4A": "#C5E336", "5A": "#6BCB77", "6A": "#4D96FF",
@@ -31,6 +32,7 @@ interface CrateTableProps {
 export default function CrateTable({ crateTracks, crateName, onRemoveTrack, tracks, onBuildSet, onExport }: CrateTableProps) {
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const { playAll, queue } = usePlayer();
 
   // Normalize: if crateTracks provided, map them to displayable rows; else fall back to legacy tracks prop
   const rows: {
@@ -85,6 +87,24 @@ export default function CrateTable({ crateTracks, crateName, onRemoveTrack, trac
           {crateName && <span style={{ color: A.t5 }}>in <b style={{ color: A.t1 }}>{crateName}</b></span>}
         </div>
         <div style={{ display: "flex", gap: 8 }}>
+          {rows.length > 0 && (
+            <button
+              onClick={() => {
+                const playerTracks: PlayerTrack[] = rows.map(r => ({
+                  id: r.id, artist: r.artist, title: r.title,
+                  label: r.label, bpm: r.bpm, key: r.key,
+                }));
+                playAll(playerTracks);
+              }}
+              style={{
+                display: "flex", alignItems: "center", gap: 6, padding: "6px 12px", borderRadius: 8,
+                border: "none", backgroundColor: "#FF5500", fontSize: 12, color: "#fff",
+                cursor: "pointer", fontFamily: "inherit", fontWeight: 500,
+              }}
+            >
+              <PlayCircle size={12} /> Play All
+            </button>
+          )}
           <button onClick={onExport} style={{
             display: "flex", alignItems: "center", gap: 6, padding: "6px 12px", borderRadius: 8,
             border: `1px solid ${A.border}`, backgroundColor: "#fff", fontSize: 12, color: A.t4,
@@ -150,7 +170,11 @@ export default function CrateTable({ crateTracks, crateName, onRemoveTrack, trac
                   >
                     <td style={{ ...tdStyle, color: A.t5, fontFamily: "monospace", fontSize: 11 }}>{i + 1}</td>
                     <td style={{ ...tdStyle, paddingLeft: 8, paddingRight: 0 }}>
-                      <PlayButton track={{ id: row.id, artist: row.artist, title: row.title, label: row.label, bpm: row.bpm, key: row.key }} />
+                      <PlayButton
+                        track={{ id: row.id, artist: row.artist, title: row.title, label: row.label, bpm: row.bpm, key: row.key }}
+                        queueTracks={sorted.map(r => ({ id: r.id, artist: r.artist, title: r.title, label: r.label, bpm: r.bpm, key: r.key }))}
+                        queueIndex={i}
+                      />
                     </td>
                     <td style={{ ...tdStyle, fontWeight: 600, color: A.t1 }}>{row.artist}</td>
                     <td style={tdStyle}>

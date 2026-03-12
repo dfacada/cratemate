@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { X, ExternalLink, AlertCircle, Loader2, ChevronDown, ChevronUp, RefreshCw } from "lucide-react";
+import { X, ExternalLink, AlertCircle, Loader2, ChevronDown, ChevronUp, RefreshCw, SkipBack, SkipForward } from "lucide-react";
 import { usePlayer } from "@/context/player-context";
 import BeatportEnrichment from "@/components/beatport-enrichment";
 
@@ -11,7 +11,10 @@ const A = {
 const SC_ORANGE = "#FF5500";
 
 export default function PlayerBar() {
-  const { currentTrack, scResult, status, errorMsg, stop, play } = usePlayer();
+  const {
+    currentTrack, scResult, status, errorMsg, stop, play,
+    queue, queueIndex, next, prev, hasNext, hasPrev,
+  } = usePlayer();
   const [expanded, setExpanded] = useState(false);
 
   if (!currentTrack || status === "idle") return null;
@@ -19,6 +22,43 @@ export default function PlayerBar() {
   const loading = status === "loading";
   const isError = status === "error";
   const isReady = status === "ready" && !!scResult?.embed_url;
+  const inQueue = queue.length > 1;
+
+  // Transport controls (next/prev) — shown in all states when there's a queue
+  const transportControls = inQueue ? (
+    <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
+      <button
+        onClick={prev}
+        disabled={!hasPrev}
+        style={{
+          ...navBtn,
+          opacity: hasPrev ? 1 : 0.3,
+          cursor: hasPrev ? "pointer" : "default",
+        }}
+        title="Previous track"
+      >
+        <SkipBack size={13} fill="currentColor" />
+      </button>
+      <span style={{
+        fontSize: 10, color: A.t5, fontFamily: "monospace",
+        minWidth: 38, textAlign: "center",
+      }}>
+        {queueIndex + 1}/{queue.length}
+      </span>
+      <button
+        onClick={next}
+        disabled={!hasNext}
+        style={{
+          ...navBtn,
+          opacity: hasNext ? 1 : 0.3,
+          cursor: hasNext ? "pointer" : "default",
+        }}
+        title="Next track"
+      >
+        <SkipForward size={13} fill="currentColor" />
+      </button>
+    </div>
+  ) : null;
 
   return (
     <>
@@ -27,6 +67,7 @@ export default function PlayerBar() {
         {/* ── Loading ── */}
         {loading && (
           <div style={{ display: "flex", alignItems: "center", gap: 12, height: 64, padding: "0 16px" }}>
+            {transportControls}
             <div style={{ width: 38, height: 38, borderRadius: 8, backgroundColor: "#FF550012", border: "1px solid #FF550030", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
               <Loader2 size={16} color={SC_ORANGE} style={{ animation: "spin 0.7s linear infinite" }} />
             </div>
@@ -43,6 +84,7 @@ export default function PlayerBar() {
         {/* ── Error ── */}
         {isError && (
           <div style={{ display: "flex", alignItems: "center", gap: 12, height: 64, padding: "0 16px" }}>
+            {transportControls}
             <div style={{ width: 38, height: 38, borderRadius: 8, backgroundColor: "#fef2f2", border: "1px solid #fecaca", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
               <AlertCircle size={16} color="#ef4444" />
             </div>
@@ -58,6 +100,12 @@ export default function PlayerBar() {
             <button onClick={() => play(currentTrack, true)} style={actionBtn} title="Retry">
               <RefreshCw size={11} style={{ marginRight: 4 }} /> Retry
             </button>
+            {/* If error and there's a next track, offer to skip */}
+            {hasNext && (
+              <button onClick={next} style={actionBtn} title="Skip to next">
+                <SkipForward size={11} style={{ marginRight: 4 }} /> Skip
+              </button>
+            )}
             <button onClick={stop} style={closeBtn}><X size={12} /></button>
           </div>
         )}
@@ -67,6 +115,9 @@ export default function PlayerBar() {
           <>
             {/* Header row */}
             <div style={{ display: "flex", alignItems: "center", height: 46, padding: "0 14px", gap: 10, borderBottom: `1px solid ${A.border}` }}>
+
+              {/* Transport controls */}
+              {transportControls}
 
               {/* SC badge */}
               <div style={{ display: "flex", alignItems: "center", gap: 5, padding: "3px 8px", borderRadius: 12, backgroundColor: "#FF550012", border: "1px solid #FF550030", flexShrink: 0 }}>
@@ -134,4 +185,10 @@ const actionBtn: React.CSSProperties = {
   padding: "4px 9px", fontSize: 11, fontWeight: 600,
   border: "1px solid #e2e8f0", borderRadius: 6, cursor: "pointer",
   backgroundColor: "transparent", color: "#94a3b8", flexShrink: 0,
+};
+const navBtn: React.CSSProperties = {
+  width: 30, height: 30, border: "none", borderRadius: 7,
+  display: "flex", alignItems: "center", justifyContent: "center",
+  backgroundColor: "transparent", color: "#64748b", flexShrink: 0,
+  transition: "all 0.15s",
 };
