@@ -55,7 +55,7 @@ export default function PlayerBar() {
             <div className="player-chips">
               <BeatportEnrichment track={currentTrack} />
             </div>
-            <button onClick={() => play(currentTrack)} style={actionBtn} title="Retry">
+            <button onClick={() => play(currentTrack, true)} style={actionBtn} title="Retry">
               <RefreshCw size={11} style={{ marginRight: 4 }} /> Retry
             </button>
             <button onClick={stop} style={closeBtn}><X size={12} /></button>
@@ -119,22 +119,6 @@ export default function PlayerBar() {
         )}
       </div>
 
-      <style>{`
-        @keyframes spin { to { transform: rotate(360deg); } }
-        .player-bar {
-          position: fixed;
-          bottom: 0; left: 224px; right: 0;
-          background: #fff;
-          border-top: 1px solid #e2e8f0;
-          box-shadow: 0 -4px 24px rgba(0,0,0,0.08);
-          z-index: 39;
-          overflow: hidden;
-        }
-        @media (max-width: 768px) {
-          .player-bar { left: 0; bottom: 56px; }
-          .player-chips { display: none !important; }
-        }
-      `}</style>
     </>
   );
 }

@@ -146,7 +146,7 @@ function TrackRow({
         {index + 1}
       </span>
       <PlayButton
-        track={{ id: `tr-${index}`, artist: track.artist, title: track.title, label: track.label || "" }}
+        track={{ id: `${tag === "ORIGINAL" ? "orig" : "rec"}-${index}`, artist: track.artist, title: track.title, label: track.label || "" }}
         size={24}
       />
       <div style={{ flex: 1, minWidth: 0 }}>
@@ -208,14 +208,25 @@ export default function DigEngine() {
   const [crateSaved,    setCrateSaved]    = useState(false);
   const [crateName,     setCrateName]     = useState("");
 
-  // ── URL import ─────────────────────────────────────────────────────────────
+  // ── URL import (auto-detect Spotify or Deezer) ─────────────────────────────
   const handleUrlImport = async () => {
     setSpotifyError(null);
-    setLoadingMsg("Fetching playlist from Spotify…");
+    const isDeezer = /deezer\.com\//.test(urlInput);
+    const isSpotify = /spotify\.com\//.test(urlInput);
+
+    if (!isDeezer && !isSpotify) {
+      setSpotifyError("Paste a Spotify or Deezer playlist URL.");
+      return;
+    }
+
+    setLoadingMsg(isDeezer ? "Fetching playlist from Deezer\u2026" : "Fetching playlist from Spotify\u2026");
     setPhase("analyzing");
     setProgress(0);
     try {
-      const res  = await fetch(`/api/spotify?url=${encodeURIComponent(urlInput)}`);
+      const endpoint = isDeezer
+        ? `/api/deezer?url=${encodeURIComponent(urlInput)}`
+        : `/api/spotify?url=${encodeURIComponent(urlInput)}`;
+      const res  = await fetch(endpoint);
       const data = await res.json();
       if (!res.ok) {
         if (data.error === "SPOTIFY_NOT_CONFIGURED") {
@@ -225,10 +236,11 @@ export default function DigEngine() {
         }
         throw new Error(data.error || "Failed to fetch playlist");
       }
-      setPlaylistName(data.name);
-      setCrateName(data.name);
+      const name = data.name || (isDeezer ? "Deezer Playlist" : "Spotify Playlist");
+      setPlaylistName(name);
+      setCrateName(name);
       setTracks(data.tracks);
-      await runAnalysis(data.tracks, data.name);
+      await runAnalysis(data.tracks, name);
     } catch (e: any) {
       setError(e.message); setPhase("input");
     }
@@ -377,7 +389,7 @@ export default function DigEngine() {
       {/* Mode toggle */}
       <div style={{ display: "flex", gap: 0, borderRadius: 9, border: `1px solid ${A.border}`, backgroundColor: "#f8fafc", overflow: "hidden", alignSelf: "flex-start" }}>
         {([
-          { key: "url",        label: "🎵  Spotify" },
+          { key: "url",        label: "🎵  Playlist URL" },
           { key: "soundcloud", label: "☁️  SoundCloud" },
           { key: "paste",      label: "📋  Paste Tracks" },
         ] as const).map(mode => (
@@ -394,12 +406,12 @@ export default function DigEngine() {
       {/* Spotify */}
       {inputMode === "url" && (
         <div style={{ borderRadius: 12, border: `1px solid ${A.border}`, backgroundColor: A.panel, padding: 24 }}>
-          <p style={{ fontSize: 14, fontWeight: 600, color: A.t1, marginBottom: 4 }}>Paste a Spotify playlist URL</p>
-          <p style={{ fontSize: 12, color: A.t5, marginBottom: 16 }}>Public playlists only. Requires Spotify credentials in Vercel env vars.</p>
+          <p style={{ fontSize: 14, fontWeight: 600, color: A.t1, marginBottom: 4 }}>Paste a playlist URL</p>
+          <p style={{ fontSize: 12, color: A.t5, marginBottom: 16 }}>Spotify or Deezer. Public playlists only.</p>
           <div style={{ display: "flex", gap: 8 }}>
             <input value={urlInput} onChange={e => { setUrlInput(e.target.value); setSpotifyError(null); }}
               onKeyDown={e => e.key === "Enter" && urlInput && handleUrlImport()}
-              placeholder="https://open.spotify.com/playlist/..."
+              placeholder="https://open.spotify.com/playlist/... or https://deezer.com/playlist/..."
               style={{ flex: 1, height: 42, padding: "0 14px", borderRadius: 9, border: `1.5px solid ${A.border}`, fontSize: 13, color: A.t1, fontFamily: "inherit", outline: "none", backgroundColor: "#fafafa" }} />
             <button onClick={handleUrlImport} disabled={!urlInput}
               style={{ padding: "0 20px", borderRadius: 9, border: "none", backgroundColor: urlInput ? A.accent : "#e2e8f0", color: urlInput ? "#fff" : A.t5, fontSize: 13, fontWeight: 600, cursor: urlInput ? "pointer" : "not-allowed", fontFamily: "inherit" }}>
@@ -608,7 +620,6 @@ export default function DigEngine() {
         />
       )}
 
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }

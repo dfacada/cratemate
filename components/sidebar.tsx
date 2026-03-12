@@ -196,16 +196,6 @@ export default function Sidebar() {
         })}
       </div>
 
-      <style>{`
-        .desktop-sidebar   { display: flex !important; }
-        .mobile-topbar     { display: none  !important; }
-        .mobile-bottom-nav { display: none  !important; }
-        @media (max-width: 768px) {
-          .desktop-sidebar   { display: none  !important; }
-          .mobile-topbar     { display: flex  !important; }
-          .mobile-bottom-nav { display: flex  !important; }
-        }
-      `}</style>
     </>
   );
 }

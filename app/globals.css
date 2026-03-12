@@ -16,3 +16,62 @@ body {
 ::-webkit-scrollbar-thumb { background: rgba(0,180,216,0.3); border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(0,180,216,0.5); }
 ::selection { background: rgba(0,180,216,0.2); color: #0A0F1E; }
+
+/* ── Shared animations ── */
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes pulse { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:0.6; transform:scale(0.85); } }
+@keyframes fadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+
+/* ── Sidebar responsive ── */
+.desktop-sidebar   { display: flex !important; }
+.mobile-topbar     { display: none  !important; }
+.mobile-bottom-nav { display: none  !important; }
+@media (max-width: 768px) {
+  .desktop-sidebar   { display: none  !important; }
+  .mobile-topbar     { display: flex  !important; }
+  .mobile-bottom-nav { display: flex  !important; }
+}
+
+/* ── App layout offsets ── */
+.app-main {
+  margin-left: 224px;
+  padding-top: 52px;
+  padding-bottom: 80px;
+  min-height: 100vh;
+  background-color: #f0f4f8;
+}
+.app-content {
+  padding: 24px 28px;
+  max-width: 1400px;
+}
+@media (max-width: 768px) {
+  .app-main {
+    margin-left: 0;
+    padding-top: 52px;
+    padding-bottom: 136px;
+  }
+  .app-content {
+    padding: 16px;
+  }
+}
+
+/* ── Player bar responsive ── */
+.player-bar {
+  position: fixed;
+  bottom: 0; left: 224px; right: 0;
+  background: #fff;
+  border-top: 1px solid #e2e8f0;
+  box-shadow: 0 -4px 24px rgba(0,0,0,0.08);
+  z-index: 39;
+  overflow: hidden;
+}
+@media (max-width: 768px) {
+  .player-bar { left: 0; bottom: 56px; }
+  .player-chips { display: none !important; }
+}
+
+/* ── Topbar responsive ── */
+.desktop-topbar { display: flex !important; }
+@media (max-width: 768px) {
+  .desktop-topbar { display: none !important; }
+}

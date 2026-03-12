@@ -230,11 +230,6 @@ export default function PlaylistUrlImport({ onImported }: { onImported: () => vo
         </div>
       )}
 
-      <style>{`
-        @keyframes spin { to { transform: rotate(360deg); } }
-        @keyframes pulse { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:0.6; transform:scale(0.85); } }
-        @keyframes fadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
-      `}</style>
     </div>
   );
 }

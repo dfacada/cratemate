@@ -28,7 +28,6 @@ export default function PlayButton({ track, size = 28 }: { track: PlayerTrack; s
       {loading ? <Loader2 size={iconSize} style={{ animation: "spin 0.7s linear infinite" }} /> :
        active   ? <Square  size={iconSize} fill="currentColor" /> :
                   <Play    size={iconSize} fill="currentColor" style={{ marginLeft: 1 }} />}
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </button>
   );
 }

@@ -80,7 +80,6 @@ export default function BeatportEnrichment({ track, onEnriched }: Props) {
       <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 10px", borderRadius: 8, backgroundColor: "#fafafa", border: `1px solid ${A.border}`, flexShrink: 0 }}>
         <Loader2 size={11} color={A.t5} style={{ animation: "spin 0.7s linear infinite", flexShrink: 0 }} />
         <span style={{ fontSize: 11, color: A.t5 }}>Searching Beatport…</span>
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     );
   }

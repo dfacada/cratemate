@@ -286,7 +286,6 @@ export default function SoundCloudExport({ crateName, tracks, onClose }: Props) 
           )}
         </div>
       </div>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }

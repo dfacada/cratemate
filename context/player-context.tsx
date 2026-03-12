@@ -19,7 +19,7 @@ interface PlayerContextValue {
   scResult:     SCSearchResult | null;
   status:       Status;
   errorMsg:     string | null;
-  play:         (track: PlayerTrack) => void;
+  play:         (track: PlayerTrack, retry?: boolean) => void;
   stop:         () => void;
 }
 
@@ -32,11 +32,21 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const [status,       setStatus]       = useState<Status>("idle");
   const [errorMsg,     setErrorMsg]     = useState<string | null>(null);
   const fetchingRef = useRef<Set<string>>(new Set());
+  // Use refs to avoid stale closures in the play callback
+  const currentTrackRef = useRef<PlayerTrack | null>(null);
+  const statusRef = useRef<Status>("idle");
 
-  const play = useCallback(async (track: PlayerTrack) => {
-    if (currentTrack?.id === track.id && status === "ready") return;
+  const play = useCallback(async (track: PlayerTrack, retry = false) => {
+    // Use refs for current state to avoid stale closure issues
+    if (currentTrackRef.current?.id === track.id && statusRef.current === "ready" && !retry) return;
+
+    // If retrying, clear the cached failure so we actually re-fetch
+    if (retry) {
+      cache.delete(track.id);
+    }
 
     setCurrentTrack(track);
+    currentTrackRef.current = track;
     setScResult(null);
     setErrorMsg(null);
 
@@ -45,10 +55,12 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       if (cached.validated && cached.embed_url) {
         setScResult(cached);
         setStatus("ready");
+        statusRef.current = "ready";
         return;
       }
       // Cached as not-found — show error immediately
       setStatus("error");
+      statusRef.current = "error";
       setErrorMsg(cached.reason || "No SoundCloud link found.");
       return;
     }
@@ -56,6 +68,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     if (fetchingRef.current.has(track.id)) return;
     fetchingRef.current.add(track.id);
     setStatus("loading");
+    statusRef.current = "loading";
 
     try {
       const params = new URLSearchParams({ artist: track.artist, title: track.title });
@@ -64,6 +77,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
       if (!res.ok || (data as any).error) {
         setStatus("error");
+        statusRef.current = "error";
         setErrorMsg((data as any).error || `Error ${res.status}`);
         return;
       }
@@ -73,22 +87,27 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       if (data.validated && data.embed_url) {
         setScResult(data);
         setStatus("ready");
+        statusRef.current = "ready";
       } else {
         setStatus("error");
+        statusRef.current = "error";
         setErrorMsg(data.reason || "No verified SoundCloud link found.");
       }
     } catch (err: any) {
       setStatus("error");
+      statusRef.current = "error";
       setErrorMsg(err?.message || "Failed to find track");
     } finally {
       fetchingRef.current.delete(track.id);
     }
-  }, [currentTrack, status]);
+  }, []); // No deps — uses refs for current state
 
   const stop = useCallback(() => {
     setCurrentTrack(null);
+    currentTrackRef.current = null;
     setScResult(null);
     setStatus("idle");
+    statusRef.current = "idle";
     setErrorMsg(null);
   }, []);
 

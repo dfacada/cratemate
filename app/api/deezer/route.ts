@@ -55,11 +55,54 @@ function matchScore(track: DeezerTrack, targetArtist: string, targetTitle: strin
   return score;
 }
 
+function extractDeezerPlaylistId(url: string): string | null {
+  const m = url.match(/deezer\.com\/(?:\w+\/)?playlist\/(\d+)/);
+  return m?.[1] ?? null;
+}
+
 export async function GET(req: NextRequest) {
+  const urlParam = req.nextUrl.searchParams.get("url") || "";
+
+  // ── Playlist import mode ─────────────────────────────────────────────
+  const playlistId = urlParam ? extractDeezerPlaylistId(urlParam) : null;
+  if (urlParam && playlistId) {
+    try {
+      const res = await fetch(`https://api.deezer.com/playlist/${playlistId}`, {
+        headers: { "Accept": "application/json", "User-Agent": "Mozilla/5.0" },
+        signal: AbortSignal.timeout(10000),
+      });
+      if (!res.ok) return NextResponse.json({ error: "Deezer playlist not found" }, { status: 404 });
+      const data = await res.json();
+      if (data.error) return NextResponse.json({ error: data.error.message || "Deezer error" }, { status: 404 });
+
+      const tracks = (data.tracks?.data || []).map((t: any) => ({
+        artist: t.artist?.name || "Unknown",
+        title:  t.title || "Unknown",
+        label:  t.album?.title || "",
+        year:   undefined,
+        bpm:    t.bpm || undefined,
+      }));
+
+      return NextResponse.json({
+        id:     playlistId,
+        name:   data.title || "Deezer Playlist",
+        image:  data.picture_medium,
+        total:  data.nb_tracks,
+        tracks,
+      });
+    } catch (err: any) {
+      return NextResponse.json({ error: err.message || "Failed to fetch Deezer playlist" }, { status: 500 });
+    }
+  }
+
+  if (urlParam) {
+    return NextResponse.json({ error: "Invalid Deezer playlist URL" }, { status: 400 });
+  }
+
+  // ── Single track search mode ─────────────────────────────────────────
   const artist = req.nextUrl.searchParams.get("artist") || "";
   const title  = req.nextUrl.searchParams.get("title")  || "";
 
-  // Support legacy ?q= param too
   const q = req.nextUrl.searchParams.get("q") || `${artist} ${title}`.trim();
   if (!q) return NextResponse.json({ error: "Missing params" }, { status: 400 });
 

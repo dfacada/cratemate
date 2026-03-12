@@ -43,13 +43,6 @@ export default function Topbar() {
           </div>
         </div>
       </div>
-      <style>{`
-        @keyframes spin { to { transform: rotate(360deg); } }
-        .desktop-topbar { display: flex !important; }
-        @media (max-width: 768px) {
-          .desktop-topbar { display: none !important; }
-        }
-      `}</style>
     </>
   );
 }

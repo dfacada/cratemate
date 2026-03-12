@@ -107,7 +107,6 @@ export default function ScreenshotUpload({ onUpload, processing = false }: { onU
         ))}
       </div>
 
-      <style>{`@keyframes spin { to { transform: rotate(360deg); }}`}</style>
     </div>
   );
 }
