@@ -1,8 +1,7 @@
 "use client";
-import { useState, useEffect } from "react";
-import { Check, AlertCircle, ExternalLink, Trash2, ShieldCheck } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Check, AlertCircle, Trash2, ShieldCheck, Loader2 } from "lucide-react";
 import { getBPToken, setBPToken, clearBPToken, parsePastedToken, BeatportToken } from "@/lib/beatport";
-import { useSearchParams } from "next/navigation";
 
 const A = {
   border: "#e2e8f0", t1: "#0f172a", t3: "#334155", t4: "#64748b", t5: "#94a3b8",
@@ -10,61 +9,117 @@ const A = {
 };
 
 const CLIENT_ID    = "0GIvkCltVIuPkkwSJHp6NDb3s0potTjLBQr388Dd";
-const BASE_URL     = typeof window !== "undefined" ? window.location.origin : "https://cratemate-five.vercel.app";
-const REDIRECT_URI = `${BASE_URL}/auth/beatport/callback`;
+// This is the ONLY redirect_uri this client_id accepts — it's Beatport's own post-message endpoint
+const REDIRECT_URI = "https://api.beatport.com/v4/auth/o/post-message/";
 
-function buildBeatportAuthUrl() {
-  const params = new URLSearchParams({
+function buildAuthUrl() {
+  return `https://api.beatport.com/v4/auth/o/authorize/?${new URLSearchParams({
     response_type: "code",
     client_id:     CLIENT_ID,
     redirect_uri:  REDIRECT_URI,
-  });
-  return `https://api.beatport.com/v4/auth/o/authorize/?${params}`;
+  })}`;
 }
 
 export default function BeatportSetup({ onConnected }: { onConnected?: () => void }) {
-  const [token,  setToken]  = useState<BeatportToken | null>(null);
-  const [pasted, setPasted] = useState("");
-  const [error,  setError]  = useState<string | null>(null);
-  const [saved,  setSaved]  = useState(false);
+  const [token,       setToken]       = useState<BeatportToken | null>(null);
+  const [authStatus,  setAuthStatus]  = useState<"idle" | "waiting" | "exchanging" | "success" | "error">("idle");
+  const [errorMsg,    setErrorMsg]    = useState<string | null>(null);
+  const [pasted,      setPasted]      = useState("");
+  const [pasteSaved,  setPasteSaved]  = useState(false);
+  const popupRef  = useRef<Window | null>(null);
+  const timerRef  = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     setToken(getBPToken());
-    // Check if we just came back from successful OAuth
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("bp") === "connected") {
-      setToken(getBPToken());
-      window.history.replaceState({}, "", "/settings");
-    }
-    if (params.get("bp") === "error") {
-      setError("Authorization failed or expired. Please try again.");
-      window.history.replaceState({}, "", "/settings");
-    }
+    return () => { timerRef.current && clearInterval(timerRef.current); };
   }, []);
 
   const handleConnect = () => {
-    window.location.href = buildBeatportAuthUrl();
+    setErrorMsg(null);
+    setAuthStatus("waiting");
+
+    // Open Beatport auth in a popup
+    const popup = window.open(
+      buildAuthUrl(),
+      "beatport-auth",
+      "width=520,height=680,scrollbars=yes,resizable=yes"
+    );
+    popupRef.current = popup;
+
+    if (!popup) {
+      setAuthStatus("error");
+      setErrorMsg("Popup was blocked. Allow popups for this site and try again.");
+      return;
+    }
+
+    // Listen for postMessage from Beatport's /post-message/ endpoint
+    const onMessage = async (event: MessageEvent) => {
+      // Beatport sends the auth code back from their domain
+      if (event.origin !== "https://api.beatport.com") return;
+
+      const code = event.data?.code || event.data?.authorization_code;
+      if (!code) return;
+
+      window.removeEventListener("message", onMessage);
+      timerRef.current && clearInterval(timerRef.current);
+      popup.close();
+
+      // Exchange code → tokens via our API proxy
+      setAuthStatus("exchanging");
+      try {
+        const res = await fetch("/api/beatport-exchange", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ code }),
+        });
+        const data = await res.json();
+        if (!res.ok || !data.access_token) throw new Error(data.error || "Exchange failed");
+
+        const parsed = parsePastedToken(JSON.stringify(data));
+        if (!parsed) throw new Error("Bad token shape");
+
+        setBPToken(parsed);
+        setToken(parsed);
+        setAuthStatus("success");
+        onConnected?.();
+      } catch (e: any) {
+        setAuthStatus("error");
+        setErrorMsg(e.message || "Token exchange failed");
+      }
+    };
+
+    window.addEventListener("message", onMessage);
+
+    // Poll for popup closed without completing
+    timerRef.current = setInterval(() => {
+      if (popup.closed) {
+        clearInterval(timerRef.current!);
+        window.removeEventListener("message", onMessage);
+        if (authStatus === "waiting") setAuthStatus("idle");
+      }
+    }, 800);
   };
 
-  const handleSave = () => {
-    setError(null);
+  const handlePasteSave = () => {
+    setErrorMsg(null);
     const parsed = parsePastedToken(pasted);
     if (!parsed) {
-      setError("Invalid JSON. Make sure you copied the entire response including the curly braces.");
+      setErrorMsg("Invalid JSON — make sure you copied the entire response body.");
       return;
     }
     setBPToken(parsed);
     setToken(parsed);
     setPasted("");
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
+    setPasteSaved(true);
+    setTimeout(() => setPasteSaved(false), 2500);
     onConnected?.();
   };
 
-  const handleClear = () => { clearBPToken(); setToken(null); };
+  const handleClear = () => { clearBPToken(); setToken(null); setAuthStatus("idle"); };
 
-  const isExpired   = token && token.expires_at < Date.now();
-  const expiresMin  = token ? Math.max(0, Math.round((token.expires_at - Date.now()) / 60000)) : 0;
+  const isExpired  = token && token.expires_at < Date.now();
+  const expiresMin = token ? Math.max(0, Math.round((token.expires_at - Date.now()) / 60000)) : 0;
+  const connected  = token && !isExpired;
 
   return (
     <div style={{ border: `1px solid ${A.border}`, borderRadius: 12, overflow: "hidden", backgroundColor: "#fff" }}>
@@ -76,26 +131,29 @@ export default function BeatportSetup({ onConnected }: { onConnected?: () => voi
         </div>
         <div>
           <p style={{ fontSize: 14, fontWeight: 700, color: A.t1 }}>Beatport</p>
-          <p style={{ fontSize: 12, color: A.t4 }}>BPM, key, label metadata + Buy links</p>
+          <p style={{ fontSize: 12, color: A.t4 }}>BPM · key · label · Buy links</p>
         </div>
-        {token && !isExpired ? (
-          <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 5, padding: "4px 10px", borderRadius: 20, backgroundColor: "#f0fdf4", border: "1px solid #86efac" }}>
-            <ShieldCheck size={12} color="#16a34a" />
-            <span style={{ fontSize: 11, fontWeight: 600, color: "#16a34a" }}>Connected</span>
-          </div>
-        ) : token ? (
-          <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 5, padding: "4px 10px", borderRadius: 20, backgroundColor: "#fef9c3", border: "1px solid #fde047" }}>
-            <AlertCircle size={12} color="#ca8a04" />
-            <span style={{ fontSize: 11, fontWeight: 600, color: "#ca8a04" }}>Token expired</span>
-          </div>
-        ) : null}
+        <div style={{ marginLeft: "auto" }}>
+          {connected && (
+            <div style={{ display: "flex", alignItems: "center", gap: 5, padding: "4px 10px", borderRadius: 20, backgroundColor: "#f0fdf4", border: "1px solid #86efac" }}>
+              <ShieldCheck size={12} color="#16a34a" />
+              <span style={{ fontSize: 11, fontWeight: 600, color: "#16a34a" }}>Connected</span>
+            </div>
+          )}
+          {isExpired && (
+            <div style={{ display: "flex", alignItems: "center", gap: 5, padding: "4px 10px", borderRadius: 20, backgroundColor: "#fef9c3", border: "1px solid #fde047" }}>
+              <AlertCircle size={12} color="#ca8a04" />
+              <span style={{ fontSize: 11, fontWeight: 600, color: "#ca8a04" }}>Expired</span>
+            </div>
+          )}
+        </div>
       </div>
 
       <div style={{ padding: 20 }}>
 
-        {/* Connected state */}
-        {token && !isExpired && (
-          <div style={{ marginBottom: 20, padding: "12px 14px", borderRadius: 8, backgroundColor: "#f0fdf4", border: "1px solid #bbf7d0", display: "flex", alignItems: "center", gap: 10 }}>
+        {/* Connected */}
+        {connected && (
+          <div style={{ padding: "12px 14px", borderRadius: 8, backgroundColor: "#f0fdf4", border: "1px solid #bbf7d0", display: "flex", alignItems: "center", gap: 10 }}>
             <Check size={14} color="#16a34a" style={{ flexShrink: 0 }} />
             <div style={{ flex: 1 }}>
               <p style={{ fontSize: 12, color: "#15803d", fontWeight: 500 }}>
@@ -110,55 +168,78 @@ export default function BeatportSetup({ onConnected }: { onConnected?: () => voi
           </div>
         )}
 
-        {/* Primary connect button */}
-        {(!token || isExpired) && (
+        {/* Connect / re-auth */}
+        {!connected && (
           <>
-            <p style={{ fontSize: 13, color: A.t3, marginBottom: 14, lineHeight: 1.5 }}>
-              Click below to authorize CrateMate with your Beatport account. You&apos;ll be redirected to Beatport and back automatically.
-            </p>
+            {/* One-click button */}
+            <div style={{ marginBottom: 20 }}>
+              <p style={{ fontSize: 13, color: A.t3, marginBottom: 12, lineHeight: 1.5 }}>
+                {isExpired ? "Your token expired. Re-connect to continue." : "Authorize CrateMate to access your Beatport account."}
+              </p>
+              <button onClick={handleConnect}
+                disabled={authStatus === "waiting" || authStatus === "exchanging"}
+                style={{
+                  display: "flex", alignItems: "center", gap: 8,
+                  padding: "10px 18px", borderRadius: 9,
+                  backgroundColor: authStatus === "success" ? "#16a34a" : "#04BE5B",
+                  color: "#fff", border: "none", fontSize: 13, fontWeight: 700,
+                  cursor: (authStatus === "waiting" || authStatus === "exchanging") ? "default" : "pointer",
+                  opacity: (authStatus === "waiting" || authStatus === "exchanging") ? 0.8 : 1,
+                }}>
+                {(authStatus === "waiting" || authStatus === "exchanging") && (
+                  <Loader2 size={14} style={{ animation: "spin 0.7s linear infinite" }} />
+                )}
+                {authStatus === "waiting"    && "Waiting for Beatport login…"}
+                {authStatus === "exchanging" && "Authorizing…"}
+                {(authStatus === "idle" || authStatus === "error") && (
+                  <>
+                    <div style={{ width: 16, height: 16, borderRadius: "50%", backgroundColor: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: "#04BE5B" }} />
+                    </div>
+                    {isExpired ? "Re-connect Beatport" : "Connect Beatport Account"}
+                  </>
+                )}
+              </button>
 
-            <button onClick={handleConnect}
-              style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 18px", borderRadius: 9, backgroundColor: "#04BE5B", color: "#fff", border: "none", fontSize: 13, fontWeight: 700, cursor: "pointer", marginBottom: 24 }}>
-              <div style={{ width: 16, height: 16, borderRadius: "50%", backgroundColor: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: "#04BE5B" }} />
-              </div>
-              Connect Beatport Account
-            </button>
+              {authStatus === "waiting" && (
+                <p style={{ fontSize: 11, color: A.t5, marginTop: 8 }}>
+                  A Beatport login window opened — complete the login there.
+                </p>
+              )}
+
+              {errorMsg && authStatus === "error" && (
+                <div style={{ display: "flex", gap: 6, padding: "8px 10px", borderRadius: 6, backgroundColor: "#fef2f2", border: "1px solid #fecaca", marginTop: 10 }}>
+                  <AlertCircle size={12} color="#ef4444" style={{ flexShrink: 0, marginTop: 1 }} />
+                  <p style={{ fontSize: 11, color: "#dc2626" }}>{errorMsg}</p>
+                </div>
+              )}
+            </div>
 
             {/* Divider */}
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
               <div style={{ flex: 1, height: 1, backgroundColor: A.border }} />
-              <span style={{ fontSize: 11, color: A.t5 }}>or paste token manually</span>
+              <span style={{ fontSize: 11, color: A.t5 }}>or paste token JSON manually</span>
               <div style={{ flex: 1, height: 1, backgroundColor: A.border }} />
+            </div>
+
+            {/* Manual fallback */}
+            <div>
+              <label style={{ fontSize: 11, fontWeight: 600, color: A.t4, letterSpacing: "0.05em", display: "block", marginBottom: 6 }}>
+                TOKEN JSON (from Beatport Network tab → POST /v4/auth/o/token/ → Response)
+              </label>
+              <textarea value={pasted} onChange={e => setPasted(e.target.value)}
+                placeholder={'{"access_token":"...","refresh_token":"...","expires_in":3600}'}
+                style={{ width: "100%", height: 72, padding: "8px 10px", border: `1px solid ${A.border}`, borderRadius: 8, fontSize: 11, fontFamily: "monospace", resize: "vertical", color: A.t1, backgroundColor: "#fafafa", outline: "none", boxSizing: "border-box" }}
+              />
+              <button onClick={handlePasteSave} disabled={!pasted.trim()}
+                style={{ marginTop: 8, padding: "7px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: pasted.trim() ? "pointer" : "not-allowed", backgroundColor: pasteSaved ? "#16a34a" : pasted.trim() ? A.accent : "#e2e8f0", color: pasted.trim() ? "#fff" : A.t5, border: "none", display: "flex", alignItems: "center", gap: 6 }}>
+                {pasteSaved ? <><Check size={12} /> Saved!</> : "Save Token"}
+              </button>
             </div>
           </>
         )}
-
-        {/* Manual paste fallback */}
-        {(token && isExpired || !token) && (
-          <div>
-            <label style={{ fontSize: 11, fontWeight: 600, color: A.t4, letterSpacing: "0.05em", display: "block", marginBottom: 6 }}>
-              PASTE TOKEN JSON (from Beatport Network tab)
-            </label>
-            <textarea
-              value={pasted}
-              onChange={e => setPasted(e.target.value)}
-              placeholder={'{"access_token":"...","refresh_token":"...","expires_in":3600}'}
-              style={{ width: "100%", height: 72, padding: "8px 10px", border: `1px solid ${error ? "#fca5a5" : A.border}`, borderRadius: 8, fontSize: 11, fontFamily: "monospace", resize: "vertical", color: A.t1, backgroundColor: "#fafafa", outline: "none", boxSizing: "border-box" }}
-            />
-            {error && (
-              <div style={{ display: "flex", gap: 6, padding: "8px 10px", borderRadius: 6, backgroundColor: "#fef2f2", border: "1px solid #fecaca", marginTop: 8 }}>
-                <AlertCircle size={12} color="#ef4444" style={{ flexShrink: 0, marginTop: 1 }} />
-                <p style={{ fontSize: 11, color: "#dc2626" }}>{error}</p>
-              </div>
-            )}
-            <button onClick={handleSave} disabled={!pasted.trim()}
-              style={{ marginTop: 10, padding: "8px 16px", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: pasted.trim() ? "pointer" : "not-allowed", backgroundColor: saved ? "#16a34a" : pasted.trim() ? A.accent : "#e2e8f0", color: pasted.trim() ? "#fff" : A.t5, border: "none", display: "flex", alignItems: "center", gap: 6 }}>
-              {saved ? <><Check size={12} /> Saved!</> : "Save Token"}
-            </button>
-          </div>
-        )}
       </div>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }
