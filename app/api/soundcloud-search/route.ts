@@ -97,16 +97,39 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const msg = await (client.messages.create as any)({
-      model:      "claude-sonnet-4-20250514",
-      max_tokens: 1024,
-      system:     SYSTEM_PROMPT,
-      tools: [{
-        type: "web_search_20250305",
-        name: "web_search",
-      }],
-      messages: [{ role: "user", content: `${artist} - ${title}` }],
-    });
+    // Retry with backoff on rate limit (429)
+    let msg: any = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        msg = await (client.messages.create as any)({
+          model:      "claude-sonnet-4-20250514",
+          max_tokens: 1024,
+          system:     SYSTEM_PROMPT,
+          tools: [{
+            type: "web_search_20250305",
+            name: "web_search",
+          }],
+          messages: [{ role: "user", content: `${artist} - ${title}` }],
+        });
+        break; // Success — exit retry loop
+      } catch (retryErr: any) {
+        const isRateLimit = retryErr?.status === 429 || retryErr?.message?.includes("rate_limit");
+        if (isRateLimit && attempt < 2) {
+          const waitMs = Math.min(5000 * Math.pow(2, attempt), 30000); // 5s, 10s
+          console.warn(`SC search rate limited, retry in ${waitMs}ms (attempt ${attempt + 1})`);
+          await new Promise(r => setTimeout(r, waitMs));
+          continue;
+        }
+        throw retryErr; // Not a rate limit or final attempt — throw to outer catch
+      }
+    }
+
+    if (!msg) {
+      return NextResponse.json({
+        artist, title, soundcloud_url: null, embed_url: null,
+        validated: false, reason: "Rate limited — please try again in a moment.",
+      } as SCSearchResult, { status: 429 });
+    }
 
     // The model may run multiple tool_use rounds before a final text block
     const textBlock = [...msg.content].reverse().find((b: any) => b.type === "text");
@@ -141,10 +164,17 @@ export async function GET(req: NextRequest) {
       headers: { "Cache-Control": "public, s-maxage=86400" },
     });
   } catch (e: any) {
-    const msg = e.message || "";
-    const err = msg.includes("apiKey") || msg.includes("authentication")
+    const errMsg = e.message || "";
+    const isRateLimit = e?.status === 429 || errMsg.includes("rate_limit");
+    if (isRateLimit) {
+      return NextResponse.json({
+        artist, title, soundcloud_url: null, embed_url: null,
+        validated: false, reason: "Rate limited — track will retry automatically.",
+      } as SCSearchResult, { status: 429 });
+    }
+    const err = errMsg.includes("apiKey") || errMsg.includes("authentication")
       ? "ANTHROPIC_API_KEY not configured."
-      : msg || "Search failed";
+      : errMsg || "Search failed";
     return NextResponse.json({ error: err }, { status: 500 });
   }
 }

@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { X, ExternalLink, AlertCircle, Loader2, ChevronDown, ChevronUp, RefreshCw, SkipBack, SkipForward } from "lucide-react";
+import { X, ExternalLink, AlertCircle, Loader2, ChevronDown, ChevronUp, RefreshCw, SkipBack, SkipForward, HardDrive } from "lucide-react";
 import { usePlayer } from "@/context/player-context";
 import BeatportEnrichment from "@/components/beatport-enrichment";
 
@@ -10,10 +10,55 @@ const A = {
 };
 const SC_ORANGE = "#FF5500";
 
+function CacheProgressBadge({ cached, total, isCaching }: { cached: number; total: number; isCaching: boolean }) {
+  if (total <= 1) return null;
+
+  const pct = Math.round((cached / total) * 100);
+  const done = cached >= total;
+
+  return (
+    <div
+      style={{
+        display: "flex", alignItems: "center", gap: 5,
+        padding: "3px 8px", borderRadius: 12, flexShrink: 0,
+        backgroundColor: done ? "#f0fdf4" : "#fefce8",
+        border: `1px solid ${done ? "#bbf7d0" : "#fef08a"}`,
+        transition: "all 0.3s ease",
+      }}
+      title={done ? "All tracks cached — skip freely!" : `Caching tracks: ${cached}/${total}`}
+    >
+      {isCaching ? (
+        <Loader2 size={10} color="#ca8a04" style={{ animation: "spin 1.5s linear infinite" }} />
+      ) : (
+        <HardDrive size={10} color="#16a34a" />
+      )}
+      <span style={{
+        fontSize: 10, fontWeight: 600, fontFamily: "monospace",
+        color: done ? "#16a34a" : "#ca8a04",
+      }}>
+        {cached}/{total}
+      </span>
+      {/* Mini progress bar */}
+      <div style={{
+        width: 32, height: 4, borderRadius: 2,
+        backgroundColor: done ? "#dcfce7" : "#fef9c3",
+        overflow: "hidden",
+      }}>
+        <div style={{
+          width: `${pct}%`, height: "100%", borderRadius: 2,
+          backgroundColor: done ? "#22c55e" : "#eab308",
+          transition: "width 0.5s ease",
+        }} />
+      </div>
+    </div>
+  );
+}
+
 export default function PlayerBar() {
   const {
     currentTrack, scResult, status, errorMsg, stop, play,
     queue, queueIndex, next, prev, hasNext, hasPrev,
+    cachedCount, cacheTotal, isCaching,
   } = usePlayer();
   const [expanded, setExpanded] = useState(false);
 
@@ -60,6 +105,10 @@ export default function PlayerBar() {
     </div>
   ) : null;
 
+  const cacheBadge = inQueue ? (
+    <CacheProgressBadge cached={cachedCount} total={cacheTotal} isCaching={isCaching} />
+  ) : null;
+
   return (
     <>
       <div className="player-bar">
@@ -77,6 +126,7 @@ export default function PlayerBar() {
               </p>
               <p style={{ fontSize: 11, color: A.t4 }}>Finding on SoundCloud…</p>
             </div>
+            {cacheBadge}
             <button onClick={stop} style={closeBtn}><X size={12} /></button>
           </div>
         )}
@@ -97,10 +147,10 @@ export default function PlayerBar() {
             <div className="player-chips">
               <BeatportEnrichment track={currentTrack} />
             </div>
+            {cacheBadge}
             <button onClick={() => play(currentTrack, true)} style={actionBtn} title="Retry">
               <RefreshCw size={11} style={{ marginRight: 4 }} /> Retry
             </button>
-            {/* If error and there's a next track, offer to skip */}
             {hasNext && (
               <button onClick={next} style={actionBtn} title="Skip to next">
                 <SkipForward size={11} style={{ marginRight: 4 }} /> Skip
@@ -139,6 +189,9 @@ export default function PlayerBar() {
               <div className="player-chips" style={{ flex: 1, display: "flex", alignItems: "center", overflow: "hidden" }}>
                 <BeatportEnrichment track={currentTrack} />
               </div>
+
+              {/* Cache progress badge */}
+              {cacheBadge}
 
               <button onClick={() => setExpanded(!expanded)} style={iconBtn} title={expanded ? "Compact" : "Full player"}>
                 {expanded ? <ChevronDown size={12} /> : <ChevronUp size={12} />}
