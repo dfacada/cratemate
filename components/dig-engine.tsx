@@ -9,6 +9,7 @@ import { AreaChart, Area, ResponsiveContainer, Tooltip } from "recharts";
 import type { TrackInput, AnalyzeResponse, RecommendedTrack, PlaylistDNA } from "@/app/api/analyze/route";
 import { usePlayer } from "@/context/player-context";
 import PlayButton from "@/components/play-button";
+import SoundCloudImport from "@/components/soundcloud-import";
 
 const A = {
   bg: "#F0F4F8", panel: "#ffffff", border: "#e2e8f0",
@@ -222,7 +223,7 @@ type Phase = "input" | "analyzing" | "results";
 
 export default function DigEngine() {
   const [phase,        setPhase]        = useState<Phase>("input");
-  const [inputMode,    setInputMode]    = useState<"url" | "paste">("url");
+  const [inputMode,    setInputMode]    = useState<"url" | "soundcloud" | "paste">("url");
   const [urlInput,     setUrlInput]     = useState("");
   const [pasteInput,   setPasteInput]   = useState("");
   const [spotifyError, setSpotifyError] = useState<string | null>(null);
@@ -324,15 +325,19 @@ export default function DigEngine() {
 
         {/* Mode toggle */}
         <div style={{ display: "flex", gap: 0, borderRadius: 9, border: `1px solid ${A.border}`, backgroundColor: "#f8fafc", overflow: "hidden", alignSelf: "flex-start" }}>
-          {(["url", "paste"] as const).map(mode => (
-            <button key={mode} onClick={() => setInputMode(mode)} style={{
+          {([
+              { key: "url",        label: "🎵  Spotify" },
+              { key: "soundcloud", label: "☁️  SoundCloud" },
+              { key: "paste",      label: "📋  Paste Tracks" },
+            ] as const).map(mode => (
+            <button key={mode.key} onClick={() => setInputMode(mode.key)} style={{
               padding: "7px 20px", fontSize: 12, fontWeight: 500, border: "none", cursor: "pointer",
               fontFamily: "inherit", transition: "all 0.15s", margin: 2, borderRadius: 7,
-              backgroundColor: inputMode === mode ? "#fff" : "transparent",
-              color: inputMode === mode ? A.t1 : A.t5,
-              boxShadow: inputMode === mode ? "0 1px 4px rgba(0,0,0,0.08)" : "none",
+              backgroundColor: inputMode === mode.key ? "#fff" : "transparent",
+              color: inputMode === mode.key ? A.t1 : A.t5,
+              boxShadow: inputMode === mode.key ? "0 1px 4px rgba(0,0,0,0.08)" : "none",
             }}>
-              {mode === "url" ? "🔗  Spotify URL" : "📋  Paste Tracks"}
+              {mode.label}
             </button>
           ))}
         </div>
@@ -363,6 +368,24 @@ export default function DigEngine() {
                 <p style={{ fontSize: 12, color: "#92400e", lineHeight: 1.5 }}>{spotifyError}</p>
               </div>
             )}
+          </div>
+        )}
+
+        {/* SoundCloud mode */}
+        {inputMode === "soundcloud" && (
+          <div style={{ borderRadius: 12, border: `1px solid ${A.border}`, backgroundColor: A.panel, padding: 24 }}>
+            <p style={{ fontSize: 14, fontWeight: 600, color: A.t1, marginBottom: 4 }}>Paste a SoundCloud URL</p>
+            <p style={{ fontSize: 12, color: A.t5, marginBottom: 16, lineHeight: 1.5 }}>
+              Works with public sets, playlists, and artist pages. Tracks load via the SoundCloud widget.
+            </p>
+            <SoundCloudImport
+              onTracks={(tracks, name) => {
+                setTracks(tracks);
+                setPlaylistName(name);
+                setPhase("analyzing");
+                runAnalysis(tracks, name);
+              }}
+            />
           </div>
         )}
 
@@ -407,7 +430,7 @@ export default function DigEngine() {
           </div>
         )}
 
-        <button
+        {inputMode !== "soundcloud" && <button
           onClick={inputMode === "url" ? handleUrlImport : handlePasteImport}
           disabled={inputMode === "url" ? !urlInput : pasteInput.trim().split("\n").filter(l => l.trim()).length < 3}
           style={{
@@ -418,7 +441,7 @@ export default function DigEngine() {
             boxShadow: "0 4px 14px rgba(0,180,216,0.3)",
           }}>
           <Sparkles size={15} /> Analyze & Find Tracks
-        </button>
+        </button>}
       </div>
     );
   }
