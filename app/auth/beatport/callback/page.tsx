@@ -1,23 +1,19 @@
 "use client";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2, Check, AlertCircle } from "lucide-react";
 import { setBPToken, parsePastedToken } from "@/lib/beatport";
 
-export default function BeatportCallbackPage() {
+function CallbackHandler() {
   const sp     = useSearchParams();
   const router = useRouter();
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
 
   useEffect(() => {
     const tokensParam = sp.get("tokens");
-    if (!tokensParam) {
-      setStatus("error");
-      return;
-    }
+    if (!tokensParam) { setStatus("error"); return; }
     try {
-      const raw    = decodeURIComponent(tokensParam);
-      const parsed = parsePastedToken(raw);
+      const parsed = parsePastedToken(decodeURIComponent(tokensParam));
       if (!parsed) throw new Error("bad token");
       setBPToken(parsed);
       setStatus("success");
@@ -55,5 +51,18 @@ export default function BeatportCallbackPage() {
         </>}
       </div>
     </div>
+  );
+}
+
+export default function BeatportCallbackPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", backgroundColor: "#F0F4F8" }}>
+        <Loader2 size={32} color="#00B4D8" style={{ animation: "spin 0.7s linear infinite" }} />
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    }>
+      <CallbackHandler />
+    </Suspense>
   );
 }
