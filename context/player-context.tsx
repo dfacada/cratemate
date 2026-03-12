@@ -1,58 +1,55 @@
 "use client";
 import { createContext, useContext, useRef, useState, useCallback } from "react";
+import type { SCSearchResult } from "@/app/api/soundcloud-search/route";
 
 export interface PlayerTrack {
-  id: string;
-  artist: string;
-  title: string;
-  label?: string;
-  bpm?: number;
-  key?: string;
+  id:      string;
+  artist:  string;
+  title:   string;
+  label?:  string;
+  bpm?:    number;
+  key?:    string;
   energy?: number;
-}
-
-export interface DeezerResult {
-  id: number;
-  title: string;
-  artist: string;
-  cover: string | null;
-  link: string;
-  score: number;
-  candidates: Array<{ id: number; title: string; artist: string; score: number }>;
 }
 
 type Status = "idle" | "loading" | "ready" | "error";
 
 interface PlayerContextValue {
   currentTrack: PlayerTrack | null;
-  deezerResult: DeezerResult | null;
-  status: Status;
-  errorMsg: string | null;
-  play: (track: PlayerTrack) => void;
-  stop: () => void;
-  swapCandidate: (id: number) => void;
+  scResult:     SCSearchResult | null;
+  status:       Status;
+  errorMsg:     string | null;
+  play:         (track: PlayerTrack) => void;
+  stop:         () => void;
 }
 
 const PlayerContext = createContext<PlayerContextValue | null>(null);
-const cache = new Map<string, DeezerResult>();
+const cache = new Map<string, SCSearchResult>();
 
 export function PlayerProvider({ children }: { children: React.ReactNode }) {
-  const [currentTrack,  setCurrentTrack]  = useState<PlayerTrack | null>(null);
-  const [deezerResult,  setDeezerResult]  = useState<DeezerResult | null>(null);
-  const [status,        setStatus]        = useState<Status>("idle");
-  const [errorMsg,      setErrorMsg]      = useState<string | null>(null);
+  const [currentTrack, setCurrentTrack] = useState<PlayerTrack | null>(null);
+  const [scResult,     setScResult]     = useState<SCSearchResult | null>(null);
+  const [status,       setStatus]       = useState<Status>("idle");
+  const [errorMsg,     setErrorMsg]     = useState<string | null>(null);
   const fetchingRef = useRef<Set<string>>(new Set());
 
   const play = useCallback(async (track: PlayerTrack) => {
     if (currentTrack?.id === track.id && status === "ready") return;
 
     setCurrentTrack(track);
-    setDeezerResult(null);
+    setScResult(null);
     setErrorMsg(null);
 
     if (cache.has(track.id)) {
-      setDeezerResult(cache.get(track.id)!);
-      setStatus("ready");
+      const cached = cache.get(track.id)!;
+      if (cached.validated && cached.embed_url) {
+        setScResult(cached);
+        setStatus("ready");
+        return;
+      }
+      // Cached as not-found — show error immediately
+      setStatus("error");
+      setErrorMsg(cached.reason || "No SoundCloud link found.");
       return;
     }
 
@@ -62,18 +59,24 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
     try {
       const params = new URLSearchParams({ artist: track.artist, title: track.title });
-      const res  = await fetch(`/api/deezer?${params}`);
-      const data = await res.json();
+      const res    = await fetch(`/api/soundcloud-search?${params}`);
+      const data: SCSearchResult = await res.json();
 
-      if (!res.ok) {
+      if (!res.ok || (data as any).error) {
         setStatus("error");
-        setErrorMsg(data.error || `Error ${res.status}`);
+        setErrorMsg((data as any).error || `Error ${res.status}`);
         return;
       }
 
       cache.set(track.id, data);
-      setDeezerResult(data);
-      setStatus("ready");
+
+      if (data.validated && data.embed_url) {
+        setScResult(data);
+        setStatus("ready");
+      } else {
+        setStatus("error");
+        setErrorMsg(data.reason || "No verified SoundCloud link found.");
+      }
     } catch (err: any) {
       setStatus("error");
       setErrorMsg(err?.message || "Failed to find track");
@@ -82,29 +85,15 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     }
   }, [currentTrack, status]);
 
-  const swapCandidate = useCallback((id: number) => {
-    if (!deezerResult || !currentTrack) return;
-    const candidate = deezerResult.candidates.find(c => c.id === id);
-    if (!candidate) return;
-    const updated: DeezerResult = {
-      ...deezerResult,
-      id:     candidate.id,
-      title:  candidate.title,
-      artist: candidate.artist,
-    };
-    cache.set(currentTrack.id, updated);
-    setDeezerResult(updated);
-  }, [deezerResult, currentTrack]);
-
   const stop = useCallback(() => {
     setCurrentTrack(null);
-    setDeezerResult(null);
+    setScResult(null);
     setStatus("idle");
     setErrorMsg(null);
   }, []);
 
   return (
-    <PlayerContext.Provider value={{ currentTrack, deezerResult, status, errorMsg, play, stop, swapCandidate }}>
+    <PlayerContext.Provider value={{ currentTrack, scResult, status, errorMsg, play, stop }}>
       {children}
     </PlayerContext.Provider>
   );

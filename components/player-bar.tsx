@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { X, ChevronDown, ChevronUp, ExternalLink, AlertCircle, Loader2 } from "lucide-react";
+import { X, ExternalLink, AlertCircle, Loader2, ChevronDown, ChevronUp, RefreshCw } from "lucide-react";
 import { usePlayer } from "@/context/player-context";
 import BeatportEnrichment from "@/components/beatport-enrichment";
 
@@ -8,21 +8,17 @@ const A = {
   border: "#e2e8f0", t1: "#0f172a", t4: "#64748b", t5: "#94a3b8",
   accent: "#00B4D8", accentBg: "rgba(0,180,216,0.09)",
 };
-
-function deezerWidgetUrl(trackId: number) {
-  return `https://widget.deezer.com/widget/light/track/${trackId}?autoplay=1&tracklist=false&radius=false`;
-}
+const SC_ORANGE = "#FF5500";
 
 export default function PlayerBar() {
-  const { currentTrack, deezerResult, status, errorMsg, stop, swapCandidate, play } = usePlayer();
-  const [expanded,       setExpanded]       = useState(false);
-  const [showCandidates, setShowCandidates] = useState(false);
+  const { currentTrack, scResult, status, errorMsg, stop, play } = usePlayer();
+  const [expanded, setExpanded] = useState(false);
 
   if (!currentTrack || status === "idle") return null;
 
   const loading = status === "loading";
   const isError = status === "error";
-  const isReady = status === "ready" && !!deezerResult;
+  const isReady = status === "ready" && !!scResult?.embed_url;
 
   return (
     <>
@@ -31,12 +27,14 @@ export default function PlayerBar() {
         {/* ── Loading ── */}
         {loading && (
           <div style={{ display: "flex", alignItems: "center", gap: 12, height: 64, padding: "0 16px" }}>
-            <div style={{ width: 40, height: 40, borderRadius: 8, backgroundColor: A.accentBg, border: "1px solid rgba(0,180,216,0.2)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-              <Loader2 size={16} color={A.accent} style={{ animation: "spin 0.7s linear infinite" }} />
+            <div style={{ width: 38, height: 38, borderRadius: 8, backgroundColor: "#FF550012", border: "1px solid #FF550030", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <Loader2 size={16} color={SC_ORANGE} style={{ animation: "spin 0.7s linear infinite" }} />
             </div>
-            <div style={{ flex: 1 }}>
-              <p style={{ fontSize: 13, fontWeight: 600, color: A.t1 }}>{currentTrack.artist} — {currentTrack.title}</p>
-              <p style={{ fontSize: 11, color: A.t4 }}>Finding on Deezer…</p>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ fontSize: 13, fontWeight: 600, color: A.t1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {currentTrack.artist} — {currentTrack.title}
+              </p>
+              <p style={{ fontSize: 11, color: A.t4 }}>Finding on SoundCloud…</p>
             </div>
             <button onClick={stop} style={closeBtn}><X size={12} /></button>
           </div>
@@ -45,60 +43,60 @@ export default function PlayerBar() {
         {/* ── Error ── */}
         {isError && (
           <div style={{ display: "flex", alignItems: "center", gap: 12, height: 64, padding: "0 16px" }}>
-            <div style={{ width: 40, height: 40, borderRadius: 8, backgroundColor: "#fef2f2", border: "1px solid #fecaca", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <div style={{ width: 38, height: 38, borderRadius: 8, backgroundColor: "#fef2f2", border: "1px solid #fecaca", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
               <AlertCircle size={16} color="#ef4444" />
             </div>
-            <div style={{ flex: 1 }}>
-              <p style={{ fontSize: 13, fontWeight: 600, color: A.t1 }}>{currentTrack.artist} — {currentTrack.title}</p>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ fontSize: 13, fontWeight: 600, color: A.t1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {currentTrack.artist} — {currentTrack.title}
+              </p>
               <p style={{ fontSize: 11, color: "#dc2626" }}>{errorMsg}</p>
             </div>
-            {/* Still show Beatport link even if Deezer fails */}
             <div className="player-chips">
               <BeatportEnrichment track={currentTrack} />
             </div>
-            <button onClick={() => play(currentTrack)} style={{ ...actionBtn, color: A.accent, borderColor: "rgba(0,180,216,0.3)", backgroundColor: A.accentBg }}>Retry</button>
+            <button onClick={() => play(currentTrack)} style={actionBtn} title="Retry">
+              <RefreshCw size={11} style={{ marginRight: 4 }} /> Retry
+            </button>
             <button onClick={stop} style={closeBtn}><X size={12} /></button>
           </div>
         )}
 
-        {/* ── Ready: Deezer widget + Beatport ── */}
-        {isReady && deezerResult && (
+        {/* ── Ready ── */}
+        {isReady && scResult && (
           <>
             {/* Header row */}
             <div style={{ display: "flex", alignItems: "center", height: 46, padding: "0 14px", gap: 10, borderBottom: `1px solid ${A.border}` }}>
 
-              {/* Deezer badge */}
-              <div style={{ display: "flex", alignItems: "center", gap: 5, padding: "3px 8px", borderRadius: 12, backgroundColor: "#a855f715", border: "1px solid #a855f730", flexShrink: 0 }}>
-                <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: "#a855f7" }} />
-                <span style={{ fontSize: 10, fontWeight: 700, color: "#a855f7", letterSpacing: "0.05em" }}>DEEZER</span>
+              {/* SC badge */}
+              <div style={{ display: "flex", alignItems: "center", gap: 5, padding: "3px 8px", borderRadius: 12, backgroundColor: "#FF550012", border: "1px solid #FF550030", flexShrink: 0 }}>
+                <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: SC_ORANGE }} />
+                <span style={{ fontSize: 10, fontWeight: 700, color: SC_ORANGE, letterSpacing: "0.05em" }}>SOUNDCLOUD</span>
+                {scResult.confidence != null && (
+                  <span style={{ fontSize: 9, color: "#FF550080" }}>{Math.round(scResult.confidence * 100)}%</span>
+                )}
               </div>
 
-              {/* Track */}
-              <div style={{ flex: "0 1 260px", minWidth: 0 }}>
+              {/* Track name */}
+              <div style={{ flex: "0 1 280px", minWidth: 0 }}>
                 <p style={{ fontSize: 13, fontWeight: 600, color: A.t1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   {currentTrack.artist} — {currentTrack.title}
                 </p>
               </div>
 
-              {/* Beatport enrichment — shows BPM, key, label, Buy button */}
+              {/* Beatport chips */}
               <div className="player-chips" style={{ flex: 1, display: "flex", alignItems: "center", overflow: "hidden" }}>
                 <BeatportEnrichment track={currentTrack} />
               </div>
 
-              {/* Wrong Deezer match? */}
-              {deezerResult.candidates?.length > 1 && (
-                <button onClick={() => setShowCandidates(!showCandidates)}
-                  style={{ ...actionBtn, color: showCandidates ? A.accent : A.t5, borderColor: showCandidates ? "rgba(0,180,216,0.3)" : A.border, backgroundColor: showCandidates ? A.accentBg : "transparent" }}>
-                  Wrong?
-                </button>
-              )}
-
               <button onClick={() => setExpanded(!expanded)} style={iconBtn} title={expanded ? "Compact" : "Full player"}>
                 {expanded ? <ChevronDown size={12} /> : <ChevronUp size={12} />}
               </button>
-              <a href={deezerResult.link} target="_blank" rel="noopener noreferrer" style={{ ...iconBtn, textDecoration: "none" } as any}>
-                <ExternalLink size={12} />
-              </a>
+              {scResult.soundcloud_url && (
+                <a href={scResult.soundcloud_url} target="_blank" rel="noopener noreferrer" style={{ ...iconBtn, textDecoration: "none" } as any} title="Open on SoundCloud">
+                  <ExternalLink size={12} />
+                </a>
+              )}
               <button onClick={stop} style={closeBtn}
                 onMouseEnter={e => { e.currentTarget.style.backgroundColor = "#fef2f2"; e.currentTarget.style.color = "#ef4444"; }}
                 onMouseLeave={e => { e.currentTarget.style.backgroundColor = "transparent"; e.currentTarget.style.color = A.t5; }}>
@@ -106,34 +104,15 @@ export default function PlayerBar() {
               </button>
             </div>
 
-            {/* Wrong Deezer match picker */}
-            {showCandidates && (
-              <div style={{ padding: "8px 14px", borderBottom: `1px solid ${A.border}`, backgroundColor: "#fafafa" }}>
-                <p style={{ fontSize: 10, color: A.t5, marginBottom: 6, fontWeight: 600, letterSpacing: "0.05em" }}>DEEZER MATCHES</p>
-                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                  {deezerResult.candidates.map(c => (
-                    <button key={c.id} onClick={() => { swapCandidate(c.id); setShowCandidates(false); }}
-                      style={{ textAlign: "left", padding: "6px 10px", borderRadius: 6, border: `1px solid ${c.id === deezerResult.id ? A.accent : A.border}`, backgroundColor: c.id === deezerResult.id ? A.accentBg : "#fff", cursor: "pointer", display: "flex", alignItems: "center", gap: 8 }}>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <p style={{ fontSize: 12, fontWeight: 500, color: A.t1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.title}</p>
-                        <p style={{ fontSize: 10, color: A.t4 }}>{c.artist}</p>
-                      </div>
-                      <span style={{ fontSize: 10, color: A.t5 }}>score {c.score}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Deezer widget */}
+            {/* SC widget iframe */}
             <iframe
-              key={deezerResult.id}
-              src={deezerWidgetUrl(deezerResult.id)}
+              key={scResult.embed_url!}
+              src={scResult.embed_url!}
               width="100%"
-              height={expanded ? 250 : 80}
+              height={expanded ? 166 : 80}
               scrolling="no"
               frameBorder="0"
-              allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+              allow="autoplay"
               style={{ display: "block", border: "none" }}
             />
           </>
@@ -161,12 +140,13 @@ export default function PlayerBar() {
 }
 
 const closeBtn: React.CSSProperties = {
-  width: 28, height: 28, border: `1px solid #e2e8f0`, borderRadius: 7,
+  width: 28, height: 28, border: "1px solid #e2e8f0", borderRadius: 7,
   cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
   color: "#94a3b8", backgroundColor: "transparent", flexShrink: 0,
 };
 const iconBtn: React.CSSProperties = { ...closeBtn };
 const actionBtn: React.CSSProperties = {
+  display: "flex", alignItems: "center",
   padding: "4px 9px", fontSize: 11, fontWeight: 600,
   border: "1px solid #e2e8f0", borderRadius: 6, cursor: "pointer",
   backgroundColor: "transparent", color: "#94a3b8", flexShrink: 0,
