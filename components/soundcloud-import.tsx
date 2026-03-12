@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { Loader2, AlertCircle, Check } from "lucide-react";
 import type { TrackInput } from "@/app/api/analyze/route";
 
@@ -12,11 +12,7 @@ interface Props {
   onTracks: (tracks: TrackInput[], playlistName: string) => void;
 }
 
-type Status = "idle" | "loading-widget" | "loading-tracks" | "done" | "error";
-
-declare global {
-  interface Window { SC?: any; }
-}
+type Status = "idle" | "loading" | "done" | "error";
 
 function isSoundCloudUrl(url: string) {
   return /soundcloud\.com\/.+/.test(url);
@@ -27,17 +23,6 @@ export default function SoundCloudImport({ onTracks }: Props) {
   const [status, setStatus] = useState<Status>("idle");
   const [error,  setError]  = useState<string | null>(null);
   const [count,  setCount]  = useState(0);
-  const iframeRef = useRef<HTMLIFrameElement>(null);
-  const widgetRef = useRef<any>(null);
-
-  // Inject SC Widget script once
-  useEffect(() => {
-    if (document.getElementById("sc-widget-script")) return;
-    const s = document.createElement("script");
-    s.id  = "sc-widget-script";
-    s.src = "https://w.soundcloud.com/player/api.js";
-    document.head.appendChild(s);
-  }, []);
 
   const handleImport = async () => {
     if (!isSoundCloudUrl(url)) {
@@ -45,94 +30,53 @@ export default function SoundCloudImport({ onTracks }: Props) {
       return;
     }
     setError(null);
-    setStatus("loading-widget");
+    setStatus("loading");
     setCount(0);
-  };
 
-  // When iframe src is set, wait for SC widget to be ready
-  useEffect(() => {
-    if (status !== "loading-widget" || !iframeRef.current) return;
+    try {
+      const res = await fetch(
+        `/api/soundcloud-resolve?url=${encodeURIComponent(url)}`
+      );
+      const data = await res.json();
 
-    let attempts = 0;
-    const interval = setInterval(() => {
-      if (!window.SC || !iframeRef.current) {
-        if (++attempts > 40) { // 10s timeout
-          clearInterval(interval);
-          setStatus("error");
-          setError("SoundCloud widget failed to load. Check the URL and try again.");
-        }
+      if (!res.ok) {
+        setStatus("error");
+        setError(data.error || "Failed to load playlist.");
         return;
       }
 
-      clearInterval(interval);
-      setStatus("loading-tracks");
-
-      const widget = window.SC.Widget(iframeRef.current);
-      widgetRef.current = widget;
-
-      widget.bind(window.SC.Widget.Events.READY, () => {
-        widget.getSounds((sounds: any[]) => {
-          if (!sounds?.length) {
-            setStatus("error");
-            setError("No tracks found. The playlist may be private or empty.");
-            return;
-          }
-
-          const tracks: TrackInput[] = sounds.map((s: any) => {
-            const rawTitle = s.title || "";
-            const rawUser  = s.user?.username || "";
-            const pubArtist = s.publisher_metadata?.artist || "";
-
-            // SC titles are often "Artist - Title" or "Artist — Title"
-            const dashMatch = rawTitle.match(/^(.+?)\s[-–—]\s(.+)$/);
-
-            let artist: string;
-            let title: string;
-
-            if (dashMatch) {
-              // Title contains "Artist - Track Name" → split it
-              artist = dashMatch[1].trim();
-              title  = dashMatch[2].trim();
-            } else if (pubArtist) {
-              artist = pubArtist;
-              title  = rawTitle;
-            } else {
-              artist = rawUser || "Unknown";
-              title  = rawTitle || "Unknown";
-            }
-
-            return {
-              artist,
-              title,
-              label: s.label_name || s.publisher_metadata?.release_title || undefined,
-              year:  s.created_at ? new Date(s.created_at).getFullYear() : undefined,
-              bpm:   s.bpm || undefined,
-            };
-          }).filter(t => t.artist !== "Unknown" || t.title !== "Unknown");
-
-          setCount(tracks.length);
-          setStatus("done");
-
-          // Get playlist title
-          widget.getCurrentSound((current: any) => {
-            const name = current?.playlist_title || "SoundCloud Playlist";
-            onTracks(tracks, name);
-          });
-        });
-      });
-
-      widget.bind(window.SC.Widget.Events.ERROR, () => {
+      if (!data.tracks?.length) {
         setStatus("error");
-        setError("SoundCloud couldn't load this URL. Make sure it's a public playlist or set.");
-      });
-    }, 250);
+        setError("No tracks found. The playlist may be private or empty.");
+        return;
+      }
 
-    return () => clearInterval(interval);
-  }, [status]);
+      // Map to TrackInput format expected by the analyze API
+      const tracks: TrackInput[] = data.tracks.map((t: any) => ({
+        artist: t.artist,
+        title:  t.title,
+        label:  t.label || undefined,
+        year:   t.year || undefined,
+        bpm:    t.bpm || undefined,
+      }));
 
-  const iframeSrc = status === "loading-widget" || status === "loading-tracks" || status === "done"
-    ? `https://w.soundcloud.com/player/?url=${encodeURIComponent(url)}&auto_play=false`
-    : "";
+      setCount(tracks.length);
+      setStatus("done");
+
+      // Notify about partial tracks if some couldn't be resolved
+      const playlistName = data.playlistName || "SoundCloud Playlist";
+      if (data.partialTracks) {
+        console.warn(
+          `${data.partialTracks} tracks in the playlist had incomplete data and were skipped.`
+        );
+      }
+
+      onTracks(tracks, playlistName);
+    } catch (err) {
+      setStatus("error");
+      setError("Network error. Please check your connection and try again.");
+    }
+  };
 
   return (
     <div>
@@ -151,7 +95,7 @@ export default function SoundCloudImport({ onTracks }: Props) {
         />
         <button
           onClick={handleImport}
-          disabled={!url || status === "loading-widget" || status === "loading-tracks"}
+          disabled={!url || status === "loading"}
           style={{
             padding: "0 20px", borderRadius: 9, border: "none",
             backgroundColor: status === "done" ? "#16a34a" : url ? "#FF5500" : "#e2e8f0",
@@ -160,7 +104,7 @@ export default function SoundCloudImport({ onTracks }: Props) {
             fontFamily: "inherit", whiteSpace: "nowrap",
             display: "flex", alignItems: "center", gap: 8,
           }}>
-          {status === "loading-widget" || status === "loading-tracks"
+          {status === "loading"
             ? <><Loader2 size={14} style={{ animation: "spin 0.7s linear infinite" }} /> Loading…</>
             : status === "done"
             ? <><Check size={14} /> {count} tracks</>
@@ -175,22 +119,11 @@ export default function SoundCloudImport({ onTracks }: Props) {
         </div>
       )}
 
-      {(status === "loading-widget" || status === "loading-tracks") && (
+      {status === "loading" && (
         <p style={{ fontSize: 11, color: A.t5, marginTop: 6 }}>
-          {status === "loading-widget" ? "Connecting to SoundCloud…" : "Reading track list…"}
+          Fetching playlist from SoundCloud…
         </p>
       )}
-
-      {/* Hidden SC widget iframe */}
-      {iframeSrc && (
-        <iframe
-          ref={iframeRef}
-          src={iframeSrc}
-          style={{ display: "none" }}
-          allow="autoplay"
-        />
-      )}
-
     </div>
   );
 }

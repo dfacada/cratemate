@@ -29,16 +29,17 @@ export interface PlaylistDNA {
 }
 
 export interface RecommendedTrack {
-  artist: string;
-  title:  string;
-  label:  string;
-  year:   number;
-  bpm:    number;
-  key:    string;
-  genre:  string;
-  why:    string;
-  energy: number;
-  mood:   string[];
+  artist:     string;
+  title:      string;
+  label:      string;
+  year:       number;
+  bpm:        number;
+  key:        string;
+  genre:      string;
+  why:        string;
+  energy:     number;
+  mood:       string[];
+  confidence: number;  // 0.0-1.0 — how certain the model is this track actually exists
 }
 
 export interface AnalyzeResponse {
@@ -97,10 +98,24 @@ export async function POST(req: NextRequest) {
       ? `\nDO NOT repeat these already-recommended tracks: ${exclude.slice(0, 30).join(", ")}`
       : "";
 
-    const prompt = `You are a world-class DJ. Based on this playlist DNA:
+    const prompt = `You are a world-class DJ and crate digger with deep knowledge of electronic music catalogs.
+
+Based on this playlist DNA:
 ${dnaSummary}
 
-Recommend exactly ${count} MORE real tracks that fit this playlist's vibe.
+Recommend exactly ${count} MORE tracks that fit this playlist's vibe.
+
+CRITICAL RULES — READ CAREFULLY:
+- Every track you recommend MUST be a real, actually released track that you are CERTAIN exists.
+- Use the EXACT artist name and track title as they appear on the official release.
+- The label MUST be the actual label that released the track — do not guess.
+- The year MUST be the actual release year.
+- If you are not 100% confident a track exists with that exact artist + title combination, DO NOT include it. Recommend a different track you ARE sure about instead.
+- DO NOT invent or fabricate tracks. DO NOT combine a real artist with a made-up title.
+- DO NOT hallucinate. If you cannot think of ${count} tracks you are certain about, return fewer tracks rather than inventing any.
+- Prefer tracks from well-known releases, established labels, and artists with verifiable discographies.
+- Include a "confidence" field (0.0 to 1.0) indicating how certain you are this track actually exists. Only include tracks with confidence >= 0.85.
+
 Be CONCISE in "why" (max 6 words).${excludeNote}
 
 Respond with ONLY a JSON array, no other text:
@@ -115,7 +130,8 @@ Respond with ONLY a JSON array, no other text:
     "genre": "string",
     "why": "max 6 words",
     "energy": number,
-    "mood": ["string"]
+    "mood": ["string"],
+    "confidence": number
   }
 ]`;
 
@@ -135,6 +151,8 @@ Respond with ONLY a JSON array, no other text:
           try { arr = JSON.parse(match[0].slice(0, cut + 1) + "\n]"); } catch { arr = []; }
         }
       }
+      // Filter out low-confidence tracks to reduce hallucinations
+      arr = arr.filter(t => (t.confidence ?? 0) >= 0.85);
       return NextResponse.json({ recommendations: arr });
     } catch (e: any) {
       return NextResponse.json({ error: e.message }, { status: 500 });
@@ -142,12 +160,25 @@ Respond with ONLY a JSON array, no other text:
   }
 
   // ── Default: DNA + first 20 recs ────────────────────────────────────────
-  const prompt = `You are a world-class DJ and music curator. Analyze this playlist and give:
+  const prompt = `You are a world-class DJ, crate digger, and music curator with deep knowledge of electronic music catalogs.
+
+Analyze this playlist and give:
 1. A DNA analysis
-2. Exactly ${Math.min(count, 20)} real track recommendations
+2. Exactly ${Math.min(count, 20)} track recommendations
 
 PLAYLIST (${tracks.length} tracks):
 ${trackList}
+
+CRITICAL RULES FOR RECOMMENDATIONS — READ CAREFULLY:
+- Every track you recommend MUST be a real, actually released track that you are CERTAIN exists.
+- Use the EXACT artist name and track title as they appear on the official release.
+- The label MUST be the actual label that released the track — do not guess.
+- The year MUST be the actual release year.
+- If you are not 100% confident a track exists with that exact artist + title combination, DO NOT include it. Recommend a different track you ARE sure about instead.
+- DO NOT invent or fabricate tracks. DO NOT combine a real artist with a made-up title.
+- DO NOT hallucinate. If you cannot think of ${Math.min(count, 20)} tracks you are certain about, return fewer tracks rather than inventing any.
+- Prefer tracks from well-known releases, established labels, and artists with verifiable discographies.
+- Include a "confidence" field (0.0 to 1.0) indicating how certain you are this track actually exists. Only include tracks with confidence >= 0.85.
 
 Be CONCISE in "why" (max 6 words). Respond ONLY with valid JSON:
 {
@@ -164,7 +195,7 @@ Be CONCISE in "why" (max 6 words). Respond ONLY with valid JSON:
     "keyThemes":  ["string"]
   },
   "recommendations": [
-    {"artist":"string","title":"string","label":"string","year":number,"bpm":number,"key":"6A","genre":"string","why":"max 6 words","energy":number,"mood":["string"]}
+    {"artist":"string","title":"string","label":"string","year":number,"bpm":number,"key":"6A","genre":"string","why":"max 6 words","energy":number,"mood":["string"],"confidence":number}
   ]
 }`;
 
@@ -179,9 +210,14 @@ Be CONCISE in "why" (max 6 words). Respond ONLY with valid JSON:
 
     if (!parsed?.dna) throw new Error("Could not parse response. Please try again.");
 
+    // Filter out low-confidence tracks to reduce hallucinations
+    const recs = (parsed.recommendations || []).filter(
+      (t: RecommendedTrack) => (t.confidence ?? 0) >= 0.85
+    );
+
     return NextResponse.json({
       dna:             parsed.dna,
-      recommendations: parsed.recommendations || [],
+      recommendations: recs,
       trackCount:      tracks.length,
       dnaSummary:      buildDNASummary(parsed.dna, trackList),
     } as AnalyzeResponse & { dnaSummary: string });
