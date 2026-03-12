@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
 PLAYLIST (${tracks.length} tracks):
 ${trackList}
 
-Respond with ONLY valid JSON in exactly this structure, no other text:
+Be CONCISE in the "why" field (max 8 words each). Respond with ONLY valid JSON in exactly this structure, no other text:
 {
   "dna": {
     "topArtists": [{"name": "string", "count": number}],
@@ -112,23 +112,68 @@ CRITICAL RULES for recommendations:
 - genres and mood tags must reflect electronic music subgenres specifically
 - Camelot key format: number + A or B (e.g. "6A", "11B")`;
 
+  // For large rec counts, split into batches to avoid truncation
+  const batchSize = 50;
+  const batches   = count > batchSize
+    ? [Math.ceil(count / 2), Math.floor(count / 2)]
+    : [count];
+
   try {
-    const message = await client.messages.create({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 8000,
-      messages: [{ role: "user", content: prompt }],
+    const results = await Promise.all(batches.map(batchCount => {
+      const batchPrompt = prompt.replace(
+        `Exactly ${count} specific real track recommendations`,
+        `Exactly ${batchCount} specific real track recommendations`
+      ).replace(
+        `"recommendations": [`,
+        `"recommendations": [`
+      );
+      return client.messages.create({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 12000,
+        messages: [{ role: "user", content: batchCount === count ? prompt : batchPrompt }],
+      });
+    }));
+
+    // Merge batches
+    const allRecs: any[] = [];
+    let mergedDna: any = null;
+
+    for (const message of results) {
+
+      const raw = message.content[0].type === "text" ? message.content[0].text : "";
+      const jsonMatch = raw.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) continue;
+
+      let jsonStr = jsonMatch[0];
+      try { JSON.parse(jsonStr); } catch {
+        const lastComplete = jsonStr.lastIndexOf("},\n    {");
+        if (lastComplete > 0) jsonStr = jsonStr.slice(0, lastComplete + 1) + "\n  ]\n}";
+        else continue;
+      }
+
+      const parsed = JSON.parse(jsonStr) as AnalyzeResponse;
+      if (!mergedDna) mergedDna = parsed.dna;
+      allRecs.push(...(parsed.recommendations || []));
+    }
+
+    if (!mergedDna) throw new Error("Claude returned a non-JSON response. Try a smaller count.");
+
+    // Deduplicate by artist+title
+    const seen = new Set<string>();
+    const dedupedRecs = allRecs.filter(r => {
+      const key = `${r.artist}::${r.title}`.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
     });
 
-    const raw = message.content[0].type === "text" ? message.content[0].text : "";
+    const finalResult: AnalyzeResponse = {
+      dna: mergedDna,
+      recommendations: dedupedRecs,
+      trackCount: tracks.length,
+    };
 
-    // Extract JSON even if model wraps in backticks
-    const jsonMatch = raw.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) throw new Error("No JSON in response");
-
-    const parsed: AnalyzeResponse = JSON.parse(jsonMatch[0]);
-    parsed.trackCount = tracks.length;
-
-    return NextResponse.json(parsed);
+    return NextResponse.json(finalResult);
   } catch (e: any) {
     console.error("Analyze error:", e);
     const msg = e.message || "";

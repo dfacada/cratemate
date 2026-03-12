@@ -413,7 +413,7 @@ export default function DigEngine() {
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <p style={{ fontSize: 12, color: A.t4 }}>Find me</p>
           <div style={{ display: "flex", gap: 6 }}>
-            {[10, 20, 30, 50].map(n => (
+            {[10, 20, 30, 50, 100].map(n => (
               <button key={n} onClick={() => setRecCount(n)}
                 style={{ padding: "5px 12px", borderRadius: 7, border: `1px solid ${recCount === n ? A.accent : A.border}`, backgroundColor: recCount === n ? A.accentBg : A.panel, color: recCount === n ? A.accent : A.t4, fontSize: 12, fontWeight: recCount === n ? 700 : 400, cursor: "pointer" }}>
                 {n}
