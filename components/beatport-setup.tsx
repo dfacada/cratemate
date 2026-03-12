@@ -1,136 +1,49 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
-import { Check, AlertCircle, Trash2, ShieldCheck, Loader2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Check, AlertCircle, Trash2, ShieldCheck, Copy, ExternalLink } from "lucide-react";
 import { getBPToken, setBPToken, clearBPToken, parsePastedToken, BeatportToken } from "@/lib/beatport";
 
-const A = {
-  border: "#e2e8f0", t1: "#0f172a", t3: "#334155", t4: "#64748b", t5: "#94a3b8",
-  accent: "#00B4D8", accentBg: "rgba(0,180,216,0.09)", accentBorder: "rgba(0,180,216,0.2)",
-};
 
 const CLIENT_ID    = "0GIvkCltVIuPkkwSJHp6NDb3s0potTjLBQr388Dd";
 const REDIRECT_URI = "https://api.beatport.com/v4/auth/o/post-message/";
 
-function buildAuthUrl() {
-  return `https://api.beatport.com/v4/auth/o/authorize/?${new URLSearchParams({
-    response_type: "code",
-    client_id:     CLIENT_ID,
-    redirect_uri:  REDIRECT_URI,
-  })}`;
-}
+const AUTH_URL = `https://api.beatport.com/v4/auth/o/authorize/?${new URLSearchParams({
+  response_type: "code",
+  client_id: CLIENT_ID,
+  redirect_uri: REDIRECT_URI,
+})}`;
+
+// This bookmarklet runs on the Beatport docs page after login and fetches + copies the token JSON
+const BOOKMARKLET_CODE = `javascript:(async()=>{const r=await fetch('https://api.beatport.com/v4/auth/o/token/',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({grant_type:'client_credentials',client_id:'${CLIENT_ID}'})});const t=await r.json();if(t.access_token){navigator.clipboard.writeText(JSON.stringify(t));alert('Token copied to clipboard!');}else{alert('Could not get token. Try logging in first.');}})();`;
 
 export default function BeatportSetup({ onConnected }: { onConnected?: () => void }) {
   const [token,      setToken]      = useState<BeatportToken | null>(null);
-  const [authStatus, setAuthStatus] = useState<"idle" | "waiting" | "exchanging" | "error">("idle");
-  const [errorMsg,   setErrorMsg]   = useState<string | null>(null);
-  const [debugLog,   setDebugLog]   = useState<string[]>([]);
   const [pasted,     setPasted]     = useState("");
-  const [pasteSaved, setPasteSaved] = useState(false);
-  const popupRef = useRef<Window | null>(null);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [error,      setError]      = useState<string | null>(null);
+  const [saved,      setSaved]      = useState(false);
+  const [step,       setStep]       = useState<1|2|3>(1);
+  const [copied,     setCopied]     = useState(false);
 
-  useEffect(() => {
-    setToken(getBPToken());
-    return () => { timerRef.current && clearInterval(timerRef.current); };
-  }, []);
+  useEffect(() => { setToken(getBPToken()); }, []);
 
-  const log = (msg: string) => setDebugLog(prev => [...prev.slice(-8), msg]);
-
-  const handleConnect = () => {
-    setErrorMsg(null);
-    setDebugLog([]);
-    setAuthStatus("waiting");
-
-    const popup = window.open(buildAuthUrl(), "beatport-auth", "width=520,height=680,scrollbars=yes");
-    popupRef.current = popup;
-
-    if (!popup) {
-      setAuthStatus("error");
-      setErrorMsg("Popup blocked — allow popups for this site.");
-      return;
-    }
-
-    log("Popup opened, waiting for postMessage…");
-
-    // Catch ALL messages so we can see exactly what Beatport sends
-    const onMessage = async (event: MessageEvent) => {
-      log(`msg from ${event.origin}: ${JSON.stringify(event.data).slice(0, 200)}`);
-
-      // Only process messages from Beatport
-      if (!event.origin.includes("beatport.com")) return;
-
-      const data = event.data;
-
-      // Try every possible field Beatport might send the code under
-      const code =
-        data?.code ||
-        data?.authorization_code ||
-        data?.authorizationCode ||
-        (typeof data === "string" && data.match(/code=([^&]+)/)?.[1]) ||
-        null;
-
-      if (!code) {
-        log(`No code found in message, fields: ${Object.keys(data || {}).join(", ")}`);
-        return;
-      }
-
-      log(`Got code: ${code.slice(0, 12)}…`);
-      window.removeEventListener("message", onMessage);
-      timerRef.current && clearInterval(timerRef.current);
-      popup.close();
-      await exchangeCode(code);
-    };
-
-    window.addEventListener("message", onMessage);
-
-    // Poll for popup close
-    timerRef.current = setInterval(() => {
-      if (popup.closed) {
-        clearInterval(timerRef.current!);
-        window.removeEventListener("message", onMessage);
-        log("Popup closed by user");
-        setAuthStatus(prev => prev === "waiting" ? "idle" : prev);
-      }
-    }, 800);
-  };
-
-  const exchangeCode = async (code: string) => {
-    setAuthStatus("exchanging");
-    try {
-      const res  = await fetch("/api/beatport-exchange", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code }),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.access_token) throw new Error(data.error || "Exchange failed");
-      const parsed = parsePastedToken(JSON.stringify(data));
-      if (!parsed) throw new Error("Bad token shape");
-      setBPToken(parsed);
-      setToken(parsed);
-      setAuthStatus("idle");
-      onConnected?.();
-      log("✓ Connected!");
-    } catch (e: any) {
-      setAuthStatus("error");
-      setErrorMsg(e.message);
-      log(`Exchange error: ${e.message}`);
-    }
-  };
-
-  const handlePasteSave = () => {
-    setErrorMsg(null);
+  const handleSave = () => {
+    setError(null);
     const parsed = parsePastedToken(pasted);
-    if (!parsed) { setErrorMsg("Invalid JSON."); return; }
+    if (!parsed) { setError("Invalid JSON — make sure you copied the entire response body (the curly braces and everything inside)."); return; }
     setBPToken(parsed);
     setToken(parsed);
     setPasted("");
-    setPasteSaved(true);
-    setTimeout(() => setPasteSaved(false), 2500);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2500);
     onConnected?.();
   };
 
-  const handleClear = () => { clearBPToken(); setToken(null); setAuthStatus("idle"); setDebugLog([]); };
+  const handleClear = () => { clearBPToken(); setToken(null); setStep(1); };
+
+  const copyNetworkStep = () => {
+    // Instructions for what to look for
+    navigator.clipboard.writeText("https://api.beatport.com/v4/auth/o/token/").catch(() => {});
+  };
 
   const isExpired  = token && token.expires_at < Date.now();
   const expiresMin = token ? Math.max(0, Math.round((token.expires_at - Date.now()) / 60000)) : 0;
@@ -166,6 +79,7 @@ export default function BeatportSetup({ onConnected }: { onConnected?: () => voi
 
       <div style={{ padding: 20 }}>
 
+        {/* ── Connected ── */}
         {connected && (
           <div style={{ padding: "12px 14px", borderRadius: 8, backgroundColor: "#f0fdf4", border: "1px solid #bbf7d0", display: "flex", alignItems: "center", gap: 10 }}>
             <Check size={14} color="#16a34a" style={{ flexShrink: 0 }} />
@@ -173,6 +87,7 @@ export default function BeatportSetup({ onConnected }: { onConnected?: () => voi
               <p style={{ fontSize: 12, color: "#15803d", fontWeight: 500 }}>
                 Token active — expires in {expiresMin < 60 ? `${expiresMin}m` : `${Math.round(expiresMin / 60)}h`}
               </p>
+              <p style={{ fontSize: 10, color: "#86efac", marginTop: 2 }}>Auto-refreshes on expiry.</p>
             </div>
             <button onClick={handleClear}
               style={{ display: "flex", alignItems: "center", gap: 5, padding: "4px 9px", borderRadius: 6, border: "1px solid #fecaca", backgroundColor: "#fef2f2", cursor: "pointer", fontSize: 11, color: "#dc2626" }}>
@@ -181,77 +96,113 @@ export default function BeatportSetup({ onConnected }: { onConnected?: () => voi
           </div>
         )}
 
+        {/* ── Setup flow ── */}
         {!connected && (
           <>
-            <p style={{ fontSize: 13, color: A.t3, marginBottom: 12, lineHeight: 1.5 }}>
-              {isExpired ? "Your token expired. Re-connect to continue." : "Authorize CrateMate with your Beatport account."}
+            <p style={{ fontSize: 13, color: A.t3, marginBottom: 16, lineHeight: 1.6 }}>
+              {isExpired ? "Your token expired. Follow the steps below to re-authenticate." : "Connect your Beatport account in 3 steps."}
             </p>
 
-            <button onClick={handleConnect}
-              disabled={authStatus === "waiting" || authStatus === "exchanging"}
-              style={{
-                display: "flex", alignItems: "center", gap: 8, padding: "10px 18px", borderRadius: 9,
-                backgroundColor: "#04BE5B", color: "#fff", border: "none", fontSize: 13, fontWeight: 700,
-                cursor: (authStatus === "waiting" || authStatus === "exchanging") ? "default" : "pointer",
-                opacity: (authStatus === "waiting" || authStatus === "exchanging") ? 0.8 : 1,
-                marginBottom: 8,
-              }}>
-              {(authStatus === "waiting" || authStatus === "exchanging")
-                ? <><Loader2 size={14} style={{ animation: "spin 0.7s linear infinite" }} />
-                    {authStatus === "waiting" ? "Waiting for Beatport login…" : "Authorizing…"}</>
-                : <><div style={{ width: 16, height: 16, borderRadius: "50%", backgroundColor: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: "#04BE5B" }} /></div>
-                  {isExpired ? "Re-connect Beatport" : "Connect Beatport Account"}</>}
-            </button>
-
-            {authStatus === "waiting" && (
-              <p style={{ fontSize: 11, color: A.t5, marginBottom: 12 }}>
-                Complete the login in the Beatport popup, then come back here.
+            {/* Step 1 */}
+            <Step n={1} active={step >= 1} label="Open Beatport and log in">
+              <a href="https://api.beatport.com/v4/docs/" target="_blank" rel="noopener noreferrer"
+                onClick={() => setStep(2)}
+                style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 8, backgroundColor: "#04BE5B", color: "#fff", textDecoration: "none", fontSize: 12, fontWeight: 700, marginBottom: 8 }}>
+                Open Beatport API Docs <ExternalLink size={11} />
+              </a>
+              <p style={{ fontSize: 11, color: A.t5, lineHeight: 1.5 }}>
+                Click the link above. On the page that opens, click <strong style={{ color: A.t3 }}>Authorize</strong> and log in with your Beatport credentials.
               </p>
-            )}
+            </Step>
 
-            {/* Debug log — visible during auth so we can see what Beatport sends */}
-            {debugLog.length > 0 && (
-              <div style={{ marginBottom: 16, padding: "10px 12px", borderRadius: 8, backgroundColor: "#0f172a", border: "1px solid #1e293b" }}>
-                <p style={{ fontSize: 10, color: "#64748b", marginBottom: 6, fontWeight: 700, letterSpacing: "0.05em" }}>DEBUG LOG</p>
-                {debugLog.map((line, i) => (
-                  <p key={i} style={{ fontSize: 10, color: "#94a3b8", fontFamily: "monospace", lineHeight: 1.6 }}>{line}</p>
+            {/* Step 2 */}
+            <Step n={2} active={step >= 2} label="Open DevTools → Network tab, then click Authorize">
+              <p style={{ fontSize: 11, color: A.t4, marginBottom: 8, lineHeight: 1.6 }}>
+                Before clicking Authorize on Beatport:
+              </p>
+              <ol style={{ margin: 0, padding: "0 0 0 16px", display: "flex", flexDirection: "column", gap: 4 }}>
+                {[
+                  "Press F12 (Windows) or Cmd+Option+I (Mac) to open DevTools",
+                  'Click the "Network" tab at the top of DevTools',
+                  'Now click "Authorize" and log in on the Beatport page',
+                ].map((t, i) => (
+                  <li key={i} style={{ fontSize: 11, color: A.t4, lineHeight: 1.6 }}>{t}</li>
                 ))}
-              </div>
-            )}
-
-            {errorMsg && (
-              <div style={{ display: "flex", gap: 6, padding: "8px 10px", borderRadius: 6, backgroundColor: "#fef2f2", border: "1px solid #fecaca", marginBottom: 16 }}>
-                <AlertCircle size={12} color="#ef4444" style={{ flexShrink: 0, marginTop: 1 }} />
-                <p style={{ fontSize: 11, color: "#dc2626" }}>{errorMsg}</p>
-              </div>
-            )}
-
-            {/* Divider */}
-            <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "16px 0" }}>
-              <div style={{ flex: 1, height: 1, backgroundColor: A.border }} />
-              <span style={{ fontSize: 11, color: A.t5 }}>or paste token JSON manually</span>
-              <div style={{ flex: 1, height: 1, backgroundColor: A.border }} />
-            </div>
-
-            {/* Manual paste */}
-            <div>
-              <label style={{ fontSize: 11, fontWeight: 600, color: A.t4, letterSpacing: "0.05em", display: "block", marginBottom: 6 }}>
-                TOKEN JSON (Network tab → POST /v4/auth/o/token/ → Response tab)
-              </label>
-              <textarea value={pasted} onChange={e => setPasted(e.target.value)}
-                placeholder={'{"access_token":"...","refresh_token":"...","expires_in":3600}'}
-                style={{ width: "100%", height: 72, padding: "8px 10px", border: `1px solid ${A.border}`, borderRadius: 8, fontSize: 11, fontFamily: "monospace", resize: "vertical", color: A.t1, backgroundColor: "#fafafa", outline: "none", boxSizing: "border-box" }}
-              />
-              <button onClick={handlePasteSave} disabled={!pasted.trim()}
-                style={{ marginTop: 8, padding: "7px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: pasted.trim() ? "pointer" : "not-allowed", backgroundColor: pasteSaved ? "#16a34a" : pasted.trim() ? A.accent : "#e2e8f0", color: pasted.trim() ? "#fff" : A.t5, border: "none", display: "flex", alignItems: "center", gap: 6 }}>
-                {pasteSaved ? <><Check size={12} /> Saved!</> : "Save Token"}
+              </ol>
+              <button onClick={() => setStep(3)} style={{ marginTop: 10, padding: "6px 12px", borderRadius: 7, border: `1px solid ${A.border}`, backgroundColor: "#f8fafc", fontSize: 11, fontWeight: 600, color: A.t3, cursor: "pointer" }}>
+                Done, I logged in →
               </button>
-            </div>
+            </Step>
+
+            {/* Step 3 */}
+            <Step n={3} active={step >= 3} label="Copy the token response and paste below">
+              <div style={{ backgroundColor: "#0f172a", borderRadius: 8, padding: "10px 14px", marginBottom: 10, fontFamily: "monospace", fontSize: 11 }}>
+                <p style={{ color: "#64748b", marginBottom: 4 }}>In the Network tab, filter by:</p>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ color: "#7dd3fc", flex: 1 }}>token</span>
+                  <button onClick={copyNetworkStep} style={{ background: "none", border: "1px solid #334155", borderRadius: 4, padding: "2px 7px", color: "#94a3b8", fontSize: 10, cursor: "pointer" }}>copy url</button>
+                </div>
+                <p style={{ color: "#64748b", marginTop: 8, marginBottom: 4 }}>Click the POST request → Response tab → copy all the JSON</p>
+              </div>
+
+              <textarea
+                value={pasted}
+                onChange={e => { setPasted(e.target.value); setError(null); }}
+                placeholder={'{"access_token":"eyJ...","refresh_token":"...","expires_in":3600,"token_type":"Bearer"}'}
+                style={{
+                  width: "100%", height: 88, padding: "9px 11px",
+                  border: `1.5px solid ${error ? "#fca5a5" : pasted ? A.accent : A.border}`,
+                  borderRadius: 8, fontSize: 11, fontFamily: "monospace",
+                  resize: "vertical", color: A.t1, backgroundColor: "#fafafa",
+                  outline: "none", boxSizing: "border-box", lineHeight: 1.5,
+                  transition: "border-color 0.15s",
+                }}
+              />
+
+              {error && (
+                <div style={{ display: "flex", gap: 6, padding: "7px 10px", borderRadius: 6, backgroundColor: "#fef2f2", border: "1px solid #fecaca", marginTop: 6 }}>
+                  <AlertCircle size={12} color="#ef4444" style={{ flexShrink: 0, marginTop: 1 }} />
+                  <p style={{ fontSize: 11, color: "#dc2626" }}>{error}</p>
+                </div>
+              )}
+
+              <button onClick={handleSave} disabled={!pasted.trim()}
+                style={{
+                  marginTop: 10, padding: "9px 18px", borderRadius: 8, fontSize: 13, fontWeight: 700,
+                  cursor: pasted.trim() ? "pointer" : "not-allowed",
+                  backgroundColor: saved ? "#16a34a" : pasted.trim() ? "#04BE5B" : "#e2e8f0",
+                  color: pasted.trim() ? "#fff" : A.t5,
+                  border: "none", display: "flex", alignItems: "center", gap: 7,
+                  transition: "background-color 0.15s",
+                }}>
+                {saved ? <><Check size={13} /> Connected!</> : "Save & Connect"}
+              </button>
+            </Step>
           </>
         )}
       </div>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }
+
+function Step({ n, active, label, children }: { n: number; active: boolean; label: string; children: React.ReactNode }) {
+  return (
+    <div style={{ display: "flex", gap: 12, marginBottom: 20, opacity: active ? 1 : 0.35 }}>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, flexShrink: 0 }}>
+        <div style={{ width: 24, height: 24, borderRadius: "50%", backgroundColor: active ? A.accent : "#e2e8f0", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <span style={{ fontSize: 11, fontWeight: 700, color: active ? "#fff" : "#94a3b8" }}>{n}</span>
+        </div>
+        {n < 3 && <div style={{ width: 1, flex: 1, minHeight: 20, backgroundColor: "#e2e8f0" }} />}
+      </div>
+      <div style={{ flex: 1, paddingTop: 3 }}>
+        <p style={{ fontSize: 13, fontWeight: 600, color: A.t1, marginBottom: 10 }}>{label}</p>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+const A = {
+  border: "#e2e8f0", t1: "#0f172a", t2: "#1e293b", t3: "#334155", t4: "#64748b", t5: "#94a3b8",
+  accent: "#00B4D8", accentBg: "rgba(0,180,216,0.09)", accentBorder: "rgba(0,180,216,0.2)",
+};
