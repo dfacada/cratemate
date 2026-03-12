@@ -277,41 +277,88 @@ export default function DigEngine() {
   };
 
   const runAnalysis = async (trackList: TrackInput[], name: string) => {
-    setLoadingMsg(`Analyzing ${trackList.length} tracks…`);
     setError(null);
     setProgress(0);
+    setLoadingMsg("Analyzing your playlist…");
 
-    // Fake progress: fast early, asymptotically approaches 92%, jumps to 100 on done
-    let pct = 0;
-    const tick = setInterval(() => {
-      pct = pct + (92 - pct) * 0.045; // slows as it approaches 92
-      setProgress(Math.round(pct));
-    }, 300);
+    // Helper: safely parse API responses (guards against Vercel HTML error pages)
+    const safeJson = async (res: Response) => {
+      const text = await res.text();
+      try { return JSON.parse(text); }
+      catch { throw new Error(text.slice(0, 120).trim() || `Server error ${res.status}`); }
+    };
 
     try {
+      // ── Step 1: DNA + first 20 recs (one call, fast) ──────────────────
       setLoadingMsg("Claude is reading the vibe…");
-      const res  = await fetch("/api/analyze", {
-        method: "POST",
+      const firstRes = await fetch("/api/analyze", {
+        method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tracks: trackList, count: recCount }),
+        body:    JSON.stringify({ tracks: trackList, count: Math.min(recCount, 20) }),
       });
+      const firstData = await safeJson(firstRes);
+      if (!firstRes.ok || firstData.error) throw new Error(firstData.error || "Analysis failed");
 
-      if (!res.ok) {
-        const d = await res.json();
-        throw new Error(d.error || "Analysis failed");
+      const batchTotal  = Math.max(1, Math.ceil(recCount / 20));
+      const perBatchPct = 90 / batchTotal;
+
+      setProgress(Math.round(perBatchPct));
+
+      // Show partial results immediately
+      const partial: AnalyzeResponse = { dna: firstData.dna, recommendations: firstData.recommendations, trackCount: trackList.length };
+      setResult(partial);
+      if (recCount <= 20) {
+        setProgress(100);
+        await new Promise(r => setTimeout(r, 250));
+        setPhase("results");
+        return;
       }
 
-      const data: AnalyzeResponse = await res.json();
-      clearInterval(tick);
+      setPhase("results"); // show results while more load in background
+
+      // ── Step 2+: fetch remaining batches of 20 in sequence ────────────
+      const dnaSummary = firstData.dnaSummary || "";
+      const allRecs    = [...firstData.recommendations];
+      const seen       = new Set(allRecs.map((r: any) => `${r.artist}::${r.title}`.toLowerCase()));
+      let   batchsDone = 1;
+
+      while (allRecs.length < recCount) {
+        const remaining = recCount - allRecs.length;
+        const batchSize = Math.min(20, remaining);
+        setLoadingMsg(`Finding more tracks… (${allRecs.length}/${recCount})`);
+
+        const batchRes  = await fetch("/api/analyze?mode=recs", {
+          method:  "POST",
+          headers: { "Content-Type": "application/json" },
+          body:    JSON.stringify({
+            tracks:     trackList.slice(0, 30),
+            count:      batchSize,
+            dnaSummary,
+            exclude:    Array.from(seen),
+          }),
+        });
+        const batchData = await safeJson(batchRes);
+        if (batchData.error) break; // non-fatal, show what we have
+
+        const newRecs = (batchData.recommendations || []).filter((r: any) => {
+          const key = `${r.artist}::${r.title}`.toLowerCase();
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+
+        allRecs.push(...newRecs);
+        batchsDone++;
+
+        setProgress(Math.min(95, Math.round(perBatchPct * batchsDone)));
+        setResult(prev => prev ? { ...prev, recommendations: [...allRecs] } : prev);
+      }
+
       setProgress(100);
-      await new Promise(r => setTimeout(r, 350)); // brief 100% flash
-      setResult(data);
-      setPhase("results");
+      setLoadingMsg("");
     } catch (e: any) {
-      clearInterval(tick);
-      setProgress(0);
       setError(e.message);
-      setPhase("input");
+      if (!result) setPhase("input");
     }
   };
 
