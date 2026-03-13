@@ -23,7 +23,7 @@ export default function PlayButton({
   queueIndex,
   variant = "filled",
 }: PlayButtonProps) {
-  const { currentTrack, status, play, pause, playAll } = usePlayer();
+  const { currentTrack, status, play, pause, playAll, searchAndPlay } = usePlayer();
 
   // Compute pixel dimensions from size
   const sizeMap = { sm: 24, md: 32, lg: 40 };
@@ -48,8 +48,12 @@ export default function PlayButton({
       pause();
     } else if (queueTracks && queueIndex != null) {
       playAll(queueTracks, queueIndex);
-    } else {
+    } else if (track.spotifyUri) {
+      // Track already has Spotify URI — play directly
       play(track);
+    } else {
+      // No Spotify URI — search Spotify first, then play
+      searchAndPlay(track);
     }
   };
 

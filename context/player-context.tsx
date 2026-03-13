@@ -18,7 +18,6 @@ import {
   spotifySeek,
   spotifySetVolume,
   spotifyGetCurrentState,
-  searchSpotifyTrack,
   isSpotifyAuthenticated,
 } from "@/lib/spotify";
 import type { SCSearchResult } from "@/app/api/soundcloud-search/route";
@@ -794,13 +793,27 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
   const searchAndPlay = useCallback(
     async (track: PlayerTrack) => {
-      // Try to find track on Spotify if not already known
+      // Try to find track on Spotify via server-side API if not already known
       if (!track.spotifyUri) {
         setStatus("loading");
-        const result = await searchSpotifyTrack(track.artist, track.title);
-        if (result) {
-          track.spotifyUri = result.spotifyUri;
-          track.spotifyId = result.spotifyId;
+        statusRef.current = "loading";
+        setCurrentTrack(track);
+        currentTrackRef.current = track;
+        try {
+          const params = new URLSearchParams({ artist: track.artist, title: track.title });
+          const res = await fetch(`/api/spotify-search?${params}`);
+          if (res.ok) {
+            const result = await res.json();
+            if (result.spotifyUri) {
+              track.spotifyUri = result.spotifyUri;
+              track.spotifyId = result.spotifyId;
+              if (result.albumArt?.medium) {
+                track.albumCover = result.albumArt.medium;
+              }
+            }
+          }
+        } catch (err) {
+          console.warn("Spotify search failed, falling back:", err);
         }
       }
       await play(track);

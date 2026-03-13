@@ -467,6 +467,9 @@ function RecommendationCard({
               bpm: track.bpm,
               key: track.camelotKey,
               energy: track.energy,
+              spotifyUri: track.spotifyUri,
+              spotifyId: track.spotifyId,
+              albumCover: typeof track.albumArt === "string" ? track.albumArt : track.albumArt?.medium,
             }}
             size="md"
             variant="filled"

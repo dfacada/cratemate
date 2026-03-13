@@ -15,6 +15,7 @@ function formatTime(seconds: number): string {
 export default function PlayerBar() {
   const {
     currentTrack,
+    scResult,
     status,
     errorMsg,
     playbackSource,
@@ -31,6 +32,7 @@ export default function PlayerBar() {
     hasPrev,
     seek,
     setVolume: setVolumeControl,
+    audioRef,
   } = usePlayer();
 
   const [expanded, setExpanded] = useState(false);
@@ -308,6 +310,32 @@ export default function PlayerBar() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Hidden audio element for Deezer preview fallback */}
+      <audio ref={audioRef} preload="auto" style={{ display: "none" }} />
+
+      {/* SoundCloud iframe for SC playback */}
+      {scResult?.embed_url && playbackSource === "soundcloud" && (
+        <iframe
+          key={scResult.embed_url}
+          src={scResult.embed_url}
+          width="100%"
+          height="0"
+          allow="autoplay"
+          style={{
+            position: "absolute",
+            bottom: 0,
+            left: 0,
+            width: 0,
+            height: 0,
+            border: "none",
+            overflow: "hidden",
+            opacity: 0,
+            pointerEvents: "none",
+          }}
+          title="SoundCloud Player"
+        />
+      )}
     </motion.div>
   );
 }
