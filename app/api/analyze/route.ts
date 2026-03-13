@@ -133,19 +133,21 @@ export async function POST(req: NextRequest) {
 1. Harmonic compatibility - what Camelot keys blend with the playlist's dominant key?
 2. BPM proximity - tracks within ±5 BPM need minimal pitch adjustment
 3. When you pitch a track to match BPM, the key shifts. Account for this.
-4. Energy flow - suggest tracks that maintain or build energy, not jarring jumps
+4. Energy MATCHING - recommend tracks at the SAME energy level as the playlist average. Do NOT default to high-energy bangers. If the playlist is chill (avg energy 0.3-0.5), recommend chill tracks. If it's peak-time (0.7-0.9), recommend peak-time. Stay within ±0.15 of the playlist's average energy.
 5. Duration - similar length tracks (within 25% of each other) work best in sets
 6. Label/artist lineage - what labels and artists share the playlist's sonic DNA?
 
 Based on this playlist DNA:
 ${dnaSummary}
 
+CRITICAL ENERGY RULE: Look at the playlist's average energy level above. Your recommendations MUST cluster around that same energy level. A mellow deep house playlist should get mellow deep house recommendations, not festival bangers. Match the vibe, don't escalate it.
+
 Recommend exactly ${count} MORE tracks that fit this playlist's vibe.
 
 Generate 30+ candidate tracks. Include your best estimate of:
 - camelotKey (e.g., "8A")
 - bpm (number)
-- energy (0.0-1.0)
+- energy (0.0-1.0) — MUST be within ±0.15 of the playlist's average energy
 - duration estimate in seconds
 - whyItFits (1-2 sentences explaining the DJ logic)
 
@@ -193,6 +195,15 @@ Respond with ONLY a JSON array, no other text:
 
       // Filter low-confidence tracks
       arr = arr.filter(t => (t.confidence ?? 0) >= 0.7);
+
+      // Filter out tracks whose energy is too far from the playlist average
+      // Extract average energy from dnaSummary (format: "Energy: ... (avg 0.XX)")
+      const energyMatch = dnaSummary.match(/avg\s+([\d.]+)\)/);
+      const avgEnergyFromDna = energyMatch ? parseFloat(energyMatch[1]) : 0.5;
+      arr = arr.filter((t: any) => {
+        if (t.energy === undefined || t.energy === null) return true;
+        return Math.abs(t.energy - avgEnergyFromDna) <= 0.2;
+      });
 
       const totalGenerated = arr.length;
       const validated: RecommendedTrack[] = [];
@@ -252,7 +263,7 @@ Respond with ONLY a JSON array, no other text:
 1. Harmonic compatibility - what Camelot keys blend together?
 2. BPM proximity - tracks within ±5 BPM need minimal pitch adjustment
 3. When you pitch a track to match BPM, the key shifts. Account for this.
-4. Energy flow - suggest tracks that maintain or build energy
+4. Energy MATCHING - recommend tracks at the SAME energy level as the playlist. Do NOT default to high-energy tracks. If the playlist is chill, recommend chill. If it's peak-time, recommend peak-time. Match the vibe.
 5. Duration - similar length tracks (within 25% of each other) work best in sets
 6. Label/artist lineage - what labels and artists share the sonic DNA?
 
@@ -266,14 +277,16 @@ ${trackList}
 For the DNA analysis, include:
 - averageBpm: the average BPM of all tracks
 - dominantKey: the most common Camelot key (e.g., "8A")
-- averageEnergy: average energy level (0.0-1.0)
+- averageEnergy: average energy level (0.0-1.0) — be honest about the playlist's actual energy, don't inflate it
 
 For each recommendation, include your best estimates:
 - camelotKey (e.g., "8A")
 - bpm (number)
-- energy (0.0-1.0)
+- energy (0.0-1.0) — MUST match the playlist's average energy within ±0.15. Do NOT skew high.
 - duration estimate in seconds
 - whyItFits (explain the DJ logic in 1-2 sentences)
+
+CRITICAL: Your recommended tracks' energy levels must cluster around the playlist's actual average energy. A deep, groovy 0.4-energy playlist should get 0.3-0.55 energy recommendations, NOT 0.7+ bangers. Match the room's temperature.
 
 Generate 30+ candidate tracks. Prefer well-known releases—we validate against Spotify.
 Only recommend tracks with confidence >= 0.7.
@@ -332,6 +345,14 @@ Respond ONLY with valid JSON:
     let recs: any[] = (parsed.recommendations || []).filter(
       (t: any) => (t.confidence ?? 0) >= 0.7
     );
+
+    // Filter out tracks whose energy is too far from the playlist average
+    const avgEnergy = parsed.dna.averageEnergy ?? 0.5;
+    const energyTolerance = 0.2; // Allow ±0.2 from playlist average
+    recs = recs.filter((t: any) => {
+      if (t.energy === undefined || t.energy === null) return true; // keep if no energy data
+      return Math.abs(t.energy - avgEnergy) <= energyTolerance;
+    });
 
     const totalGenerated = recs.length;
 

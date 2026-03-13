@@ -779,11 +779,13 @@ export function calculateMixScore(
   const bpmScore = Math.max(0, 100 - bpmDifference * 2); // 0% change = 100, 50 BPM diff = 0
 
   // 3. Energy flow (20% weight)
-  // Prefer smooth energy transitions (small differences)
+  // Prefer tracks at similar energy levels — penalize mismatches heavily
+  // Energy is on a 0.0-1.0 scale, so multiply by 250 to get meaningful penalties
+  // 0.0 diff = 100, 0.1 diff = 75, 0.2 diff = 50, 0.3 diff = 25, 0.4+ diff = 0
   let energyScore = 50; // Neutral if energy not provided
   if (currentTrack.energy !== undefined && candidateTrack.energy !== undefined) {
     const energyDiff = Math.abs(currentTrack.energy - candidateTrack.energy);
-    energyScore = Math.max(0, 100 - energyDiff * 2); // 0% diff = 100, 50 energy diff = 0
+    energyScore = Math.max(0, 100 - energyDiff * 250);
   }
 
   // 4. Duration compatibility (15% weight)
