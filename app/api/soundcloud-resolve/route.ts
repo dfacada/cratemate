@@ -172,24 +172,65 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // SC hydration sometimes includes partial track objects (just {id: number})
-    // for tracks beyond the first batch. Filter to only tracks with full data.
-    const fullTracks = playlist.tracks.filter(
-      (t: any) => t.title || t.user || t.publisher_metadata
-    );
+    // SC hydration includes full data for the first ~5 tracks.
+    // The rest are stub objects with just {id: number}.
+    // We need to resolve those stubs via the SC API.
+    const fullTracks: SCHydrationTrack[] = [];
+    const stubIds: number[] = [];
 
-    const partialCount = playlist.tracks.length - fullTracks.length;
+    for (const t of playlist.tracks) {
+      if ((t as any).title || (t as any).user || (t as any).publisher_metadata) {
+        fullTracks.push(t);
+      } else if ((t as any).id && typeof (t as any).id === "number") {
+        stubIds.push((t as any).id);
+      }
+    }
+
+    // If there are stub tracks, try to resolve them via the SC API
+    if (stubIds.length > 0) {
+      // Extract client_id from the page scripts
+      const clientIdMatch = html.match(/client_id=([a-zA-Z0-9]{32})/);
+      const clientId = clientIdMatch?.[1];
+
+      if (clientId) {
+        // SC API accepts up to 50 IDs at once
+        const batchSize = 50;
+        for (let i = 0; i < stubIds.length; i += batchSize) {
+          const batch = stubIds.slice(i, i + batchSize);
+          try {
+            const apiRes = await fetch(
+              `https://api-v2.soundcloud.com/tracks?ids=${batch.join(",")}&client_id=${clientId}`,
+              {
+                headers: {
+                  "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+                  Accept: "application/json",
+                },
+              }
+            );
+            if (apiRes.ok) {
+              const resolved: SCHydrationTrack[] = await apiRes.json();
+              fullTracks.push(...resolved);
+            }
+          } catch (err) {
+            console.warn("Failed to resolve stub tracks batch:", err);
+          }
+        }
+      } else {
+        console.warn(`Could not extract SC client_id; ${stubIds.length} tracks remain unresolved`);
+      }
+    }
 
     const tracks: ResolvedTrack[] = fullTracks
       .map(parseTrack)
       .filter((t): t is ResolvedTrack => t !== null);
 
+    const unresolvedCount = (playlist.track_count || 0) - tracks.length;
+
     return NextResponse.json({
       playlistName: playlist.title || "SoundCloud Playlist",
       tracks,
       trackCount: playlist.track_count || tracks.length,
-      // If some tracks were partial (ID-only), let the client know
-      partialTracks: partialCount > 0 ? partialCount : undefined,
+      partialTracks: unresolvedCount > 0 ? unresolvedCount : undefined,
     });
   } catch (err: any) {
     console.error("SC resolve error:", err);
