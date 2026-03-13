@@ -363,30 +363,24 @@ const USER_TOKEN_KEY = "cratemate_spotify_user_token";
 
 /**
  * Generate the Spotify authorization URL for OAuth2 Authorization Code flow.
+ * Fetches from server-side API route since SPOTIFY_CLIENT_ID is server-only.
  * Scopes: streaming for Web Playback SDK + user context for playback control.
  */
-export function getSpotifyAuthUrl(): string {
-  const clientId = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID;
-  if (!clientId) throw new Error("NEXT_PUBLIC_SPOTIFY_CLIENT_ID not configured");
-
-  const redirectUri = getSpotifyRedirectUri();
-  const scopes = [
-    "streaming",
-    "user-read-email",
-    "user-read-private",
-    "user-read-playback-state",
-    "user-modify-playback-state",
-    "user-read-currently-playing",
-  ];
-
-  const params = new URLSearchParams({
-    client_id: clientId,
-    response_type: "code",
-    redirect_uri: redirectUri,
-    scope: scopes.join(" "),
-  });
-
-  return `https://accounts.spotify.com/authorize?${params}`;
+export async function getSpotifyAuthUrl(): Promise<string> {
+  try {
+    const res = await fetch("/api/spotify-auth-url");
+    if (!res.ok) {
+      throw new Error(`API returned ${res.status}`);
+    }
+    const data = await res.json();
+    if (!data.authUrl) {
+      throw new Error("No authUrl in response");
+    }
+    return data.authUrl;
+  } catch (err: any) {
+    console.error("Failed to get Spotify auth URL:", err);
+    throw new Error("SPOTIFY_AUTH_URL_FAILED");
+  }
 }
 
 /**

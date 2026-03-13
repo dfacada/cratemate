@@ -16,6 +16,19 @@ const AUTH_URL = `https://api.beatport.com/v4/auth/o/authorize/?${new URLSearchP
 // This bookmarklet runs on the Beatport docs page after login and fetches + copies the token JSON
 const BOOKMARKLET_CODE = `javascript:(async()=>{const r=await fetch('https://api.beatport.com/v4/auth/o/token/',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({grant_type:'client_credentials',client_id:'${CLIENT_ID}'})});const t=await r.json();if(t.access_token){navigator.clipboard.writeText(JSON.stringify(t));alert('Token copied to clipboard!');}else{alert('Could not get token. Try logging in first.');}})();`;
 
+const cssVars = {
+  bgPrimary: "var(--bg-primary)",
+  bgSecondary: "var(--bg-secondary)",
+  bgTertiary: "var(--bg-tertiary)",
+  bgHover: "var(--bg-hover)",
+  border: "var(--border)",
+  textPrimary: "var(--text-primary)",
+  textSecondary: "var(--text-secondary)",
+  textMuted: "var(--text-muted)",
+  accentPrimary: "var(--accent-primary)",
+  accentSecondary: "var(--accent-secondary)",
+};
+
 export default function BeatportSetup({ onConnected }: { onConnected?: () => void }) {
   const [token,      setToken]      = useState<BeatportToken | null>(null);
   const [pasted,     setPasted]     = useState("");
@@ -50,16 +63,16 @@ export default function BeatportSetup({ onConnected }: { onConnected?: () => voi
   const connected  = token && !isExpired;
 
   return (
-    <div style={{ border: `1px solid ${A.border}`, borderRadius: 12, overflow: "hidden", backgroundColor: "#fff" }}>
+    <div style={{ border: `1px solid ${cssVars.border}`, borderRadius: 12, overflow: "hidden", backgroundColor: cssVars.bgSecondary }}>
 
       {/* Header */}
-      <div style={{ padding: "16px 20px", borderBottom: `1px solid ${A.border}`, display: "flex", alignItems: "center", gap: 10 }}>
+      <div style={{ padding: "16px 20px", borderBottom: `1px solid ${cssVars.border}`, display: "flex", alignItems: "center", gap: 10 }}>
         <div style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: "#04BE5B15", border: "1px solid #04BE5B30", display: "flex", alignItems: "center", justifyContent: "center" }}>
           <div style={{ width: 14, height: 14, borderRadius: "50%", backgroundColor: "#04BE5B" }} />
         </div>
         <div>
-          <p style={{ fontSize: 14, fontWeight: 700, color: A.t1 }}>Beatport</p>
-          <p style={{ fontSize: 12, color: A.t4 }}>BPM · key · label · Buy links</p>
+          <p style={{ fontSize: 14, fontWeight: 700, color: cssVars.textPrimary }}>Beatport</p>
+          <p style={{ fontSize: 12, color: cssVars.textSecondary }}>BPM · key · label · Buy links</p>
         </div>
         <div style={{ marginLeft: "auto" }}>
           {connected && (
@@ -99,7 +112,7 @@ export default function BeatportSetup({ onConnected }: { onConnected?: () => voi
         {/* ── Setup flow ── */}
         {!connected && (
           <>
-            <p style={{ fontSize: 13, color: A.t3, marginBottom: 16, lineHeight: 1.6 }}>
+            <p style={{ fontSize: 13, color: cssVars.textSecondary, marginBottom: 16, lineHeight: 1.6 }}>
               {isExpired ? "Your token expired. Follow the steps below to re-authenticate." : "Connect your Beatport account in 3 steps."}
             </p>
 
@@ -110,14 +123,14 @@ export default function BeatportSetup({ onConnected }: { onConnected?: () => voi
                 style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 8, backgroundColor: "#04BE5B", color: "#fff", textDecoration: "none", fontSize: 12, fontWeight: 700, marginBottom: 8 }}>
                 Open Beatport API Docs <ExternalLink size={11} />
               </a>
-              <p style={{ fontSize: 11, color: A.t5, lineHeight: 1.5 }}>
-                Click the link above. On the page that opens, click <strong style={{ color: A.t3 }}>Authorize</strong> and log in with your Beatport credentials.
+              <p style={{ fontSize: 11, color: cssVars.textMuted, lineHeight: 1.5 }}>
+                Click the link above. On the page that opens, click <strong style={{ color: cssVars.textSecondary }}>Authorize</strong> and log in with your Beatport credentials.
               </p>
             </Step>
 
             {/* Step 2 */}
             <Step n={2} active={step >= 2} label="Open DevTools → Network tab, then click Authorize">
-              <p style={{ fontSize: 11, color: A.t4, marginBottom: 8, lineHeight: 1.6 }}>
+              <p style={{ fontSize: 11, color: cssVars.textSecondary, marginBottom: 8, lineHeight: 1.6 }}>
                 Before clicking Authorize on Beatport:
               </p>
               <ol style={{ margin: 0, padding: "0 0 0 16px", display: "flex", flexDirection: "column", gap: 4 }}>
@@ -126,23 +139,23 @@ export default function BeatportSetup({ onConnected }: { onConnected?: () => voi
                   'Click the "Network" tab at the top of DevTools',
                   'Now click "Authorize" and log in on the Beatport page',
                 ].map((t, i) => (
-                  <li key={i} style={{ fontSize: 11, color: A.t4, lineHeight: 1.6 }}>{t}</li>
+                  <li key={i} style={{ fontSize: 11, color: cssVars.textSecondary, lineHeight: 1.6 }}>{t}</li>
                 ))}
               </ol>
-              <button onClick={() => setStep(3)} style={{ marginTop: 10, padding: "6px 12px", borderRadius: 7, border: `1px solid ${A.border}`, backgroundColor: "#f8fafc", fontSize: 11, fontWeight: 600, color: A.t3, cursor: "pointer" }}>
+              <button onClick={() => setStep(3)} style={{ marginTop: 10, padding: "6px 12px", borderRadius: 7, border: `1px solid ${cssVars.border}`, backgroundColor: cssVars.bgTertiary, fontSize: 11, fontWeight: 600, color: cssVars.textSecondary, cursor: "pointer" }}>
                 Done, I logged in →
               </button>
             </Step>
 
             {/* Step 3 */}
             <Step n={3} active={step >= 3} label="Copy the token response and paste below">
-              <div style={{ backgroundColor: "#0f172a", borderRadius: 8, padding: "10px 14px", marginBottom: 10, fontFamily: "monospace", fontSize: 11 }}>
-                <p style={{ color: "#64748b", marginBottom: 4 }}>In the Network tab, filter by:</p>
+              <div style={{ backgroundColor: cssVars.bgPrimary, borderRadius: 8, padding: "10px 14px", marginBottom: 10, fontFamily: "monospace", fontSize: 11 }}>
+                <p style={{ color: cssVars.textSecondary, marginBottom: 4 }}>In the Network tab, filter by:</p>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <span style={{ color: "#7dd3fc", flex: 1 }}>token</span>
-                  <button onClick={copyNetworkStep} style={{ background: "none", border: "1px solid #334155", borderRadius: 4, padding: "2px 7px", color: "#94a3b8", fontSize: 10, cursor: "pointer" }}>copy url</button>
+                  <button onClick={copyNetworkStep} style={{ background: "none", border: `1px solid ${cssVars.border}`, borderRadius: 4, padding: "2px 7px", color: cssVars.textMuted, fontSize: 10, cursor: "pointer" }}>copy url</button>
                 </div>
-                <p style={{ color: "#64748b", marginTop: 8, marginBottom: 4 }}>Click the POST request → Response tab → copy all the JSON</p>
+                <p style={{ color: cssVars.textSecondary, marginTop: 8, marginBottom: 4 }}>Click the POST request → Response tab → copy all the JSON</p>
               </div>
 
               <textarea
@@ -151,9 +164,9 @@ export default function BeatportSetup({ onConnected }: { onConnected?: () => voi
                 placeholder={'{"access_token":"eyJ...","refresh_token":"...","expires_in":3600,"token_type":"Bearer"}'}
                 style={{
                   width: "100%", height: 88, padding: "9px 11px",
-                  border: `1.5px solid ${error ? "#fca5a5" : pasted ? A.accent : A.border}`,
+                  border: `1.5px solid ${error ? "#fca5a5" : pasted ? cssVars.accentPrimary : cssVars.border}`,
                   borderRadius: 8, fontSize: 11, fontFamily: "monospace",
-                  resize: "vertical", color: A.t1, backgroundColor: "#fafafa",
+                  resize: "vertical", color: cssVars.textPrimary, backgroundColor: cssVars.bgTertiary,
                   outline: "none", boxSizing: "border-box", lineHeight: 1.5,
                   transition: "border-color 0.15s",
                 }}
@@ -170,8 +183,8 @@ export default function BeatportSetup({ onConnected }: { onConnected?: () => voi
                 style={{
                   marginTop: 10, padding: "9px 18px", borderRadius: 8, fontSize: 13, fontWeight: 700,
                   cursor: pasted.trim() ? "pointer" : "not-allowed",
-                  backgroundColor: saved ? "#16a34a" : pasted.trim() ? "#04BE5B" : "#e2e8f0",
-                  color: pasted.trim() ? "#fff" : A.t5,
+                  backgroundColor: saved ? "#16a34a" : pasted.trim() ? "#04BE5B" : cssVars.bgHover,
+                  color: pasted.trim() ? "#fff" : cssVars.textMuted,
                   border: "none", display: "flex", alignItems: "center", gap: 7,
                   transition: "background-color 0.15s",
                 }}>
@@ -189,20 +202,15 @@ function Step({ n, active, label, children }: { n: number; active: boolean; labe
   return (
     <div style={{ display: "flex", gap: 12, marginBottom: 20, opacity: active ? 1 : 0.35 }}>
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, flexShrink: 0 }}>
-        <div style={{ width: 24, height: 24, borderRadius: "50%", backgroundColor: active ? A.accent : "#e2e8f0", display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <span style={{ fontSize: 11, fontWeight: 700, color: active ? "#fff" : "#94a3b8" }}>{n}</span>
+        <div style={{ width: 24, height: 24, borderRadius: "50%", backgroundColor: active ? cssVars.accentPrimary : cssVars.bgHover, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <span style={{ fontSize: 11, fontWeight: 700, color: active ? "#fff" : cssVars.textMuted }}>{n}</span>
         </div>
-        {n < 3 && <div style={{ width: 1, flex: 1, minHeight: 20, backgroundColor: "#e2e8f0" }} />}
+        {n < 3 && <div style={{ width: 1, flex: 1, minHeight: 20, backgroundColor: cssVars.border }} />}
       </div>
       <div style={{ flex: 1, paddingTop: 3 }}>
-        <p style={{ fontSize: 13, fontWeight: 600, color: A.t1, marginBottom: 10 }}>{label}</p>
+        <p style={{ fontSize: 13, fontWeight: 600, color: cssVars.textPrimary, marginBottom: 10 }}>{label}</p>
         {children}
       </div>
     </div>
   );
 }
-
-const A = {
-  border: "#e2e8f0", t1: "#0f172a", t2: "#1e293b", t3: "#334155", t4: "#64748b", t5: "#94a3b8",
-  accent: "#00B4D8", accentBg: "rgba(0,180,216,0.09)", accentBorder: "rgba(0,180,216,0.2)",
-};

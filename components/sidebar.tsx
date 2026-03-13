@@ -68,7 +68,12 @@ function NavItem({ href, icon: Icon, label, active, primary }: NavItemProps) {
         <div style={{ flexShrink: 0 }}>
           <Icon size={18} />
         </div>
-        <span className={`text-sm font-${primary ? "bold" : active ? "semibold" : "medium"}`}>
+        <span
+          style={{
+            fontSize: "0.875rem",
+            fontWeight: primary ? 700 : active ? 600 : 500,
+          }}
+        >
           {label}
         </span>
         {active && !primary && (

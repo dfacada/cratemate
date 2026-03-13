@@ -9,9 +9,14 @@ import {
 } from "@/lib/soundcloud";
 import type { CrateTrack } from "@/lib/crates";
 
-const A = {
-  border: "#e2e8f0", t1: "#0f172a", t3: "#334155", t4: "#64748b", t5: "#94a3b8",
-  accent: "#00B4D8",
+const cssVars = {
+  border: "var(--border)",
+  textPrimary: "var(--text-primary)",
+  textSecondary: "var(--text-secondary)",
+  textMuted: "var(--text-muted)",
+  bgSecondary: "var(--bg-secondary)",
+  bgTertiary: "var(--bg-tertiary)",
+  bgHover: "var(--bg-hover)",
 };
 const SC_ORANGE = "#FF5500";
 
@@ -149,19 +154,19 @@ export default function SoundCloudExport({ crateName, tracks, onClose }: Props) 
       zIndex: 200, padding: 16,
     }}>
       <div style={{
-        backgroundColor: "#fff", borderRadius: 16, width: "100%", maxWidth: 520,
+        backgroundColor: cssVars.bgSecondary, borderRadius: 16, width: "100%", maxWidth: 520,
         boxShadow: "0 20px 60px rgba(0,0,0,0.2)", overflow: "hidden",
       }}>
         {/* Header */}
-        <div style={{ padding: "18px 20px", borderBottom: `1px solid ${A.border}`, display: "flex", alignItems: "center", gap: 12 }}>
+        <div style={{ padding: "18px 20px", borderBottom: `1px solid ${cssVars.border}`, display: "flex", alignItems: "center", gap: 12 }}>
           <div style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: "#FF550015", border: "1px solid #FF550030", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <div style={{ width: 14, height: 14, borderRadius: "50%", backgroundColor: SC_ORANGE }} />
           </div>
           <div style={{ flex: 1 }}>
-            <p style={{ fontSize: 14, fontWeight: 700, color: A.t1 }}>Export to SoundCloud</p>
-            <p style={{ fontSize: 11, color: A.t4 }}>{tracks.length} tracks · {crateName}</p>
+            <p style={{ fontSize: 14, fontWeight: 700, color: cssVars.textPrimary }}>Export to SoundCloud</p>
+            <p style={{ fontSize: 11, color: cssVars.textSecondary }}>{tracks.length} tracks · {crateName}</p>
           </div>
-          <button onClick={onClose} style={{ border: "none", background: "transparent", cursor: "pointer", color: A.t5, padding: 4 }}>
+          <button onClick={onClose} style={{ border: "none", background: "transparent", cursor: "pointer", color: cssVars.textMuted, padding: 4 }}>
             <X size={16} />
           </button>
         </div>
@@ -169,26 +174,26 @@ export default function SoundCloudExport({ crateName, tracks, onClose }: Props) 
         <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 16 }}>
 
           {/* Setup section */}
-          <div style={{ borderRadius: 10, border: `1px solid ${A.border}`, overflow: "hidden" }}>
+          <div style={{ borderRadius: 10, border: `1px solid ${cssVars.border}`, overflow: "hidden" }}>
             <button
               onClick={() => setShowSetup(!showSetup)}
-              style={{ width: "100%", padding: "11px 14px", display: "flex", alignItems: "center", gap: 10, border: "none", background: "#fafafa", cursor: "pointer", textAlign: "left" }}>
-              <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: hasToken ? "#16a34a" : hasClient ? "#f59e0b" : "#e2e8f0", flexShrink: 0 }} />
-              <span style={{ fontSize: 12, fontWeight: 600, color: A.t3, flex: 1 }}>
+              style={{ width: "100%", padding: "11px 14px", display: "flex", alignItems: "center", gap: 10, border: "none", background: cssVars.bgHover, cursor: "pointer", textAlign: "left" }}>
+              <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: hasToken ? "#16a34a" : hasClient ? "#f59e0b" : cssVars.border, flexShrink: 0 }} />
+              <span style={{ fontSize: 12, fontWeight: 600, color: cssVars.textSecondary, flex: 1 }}>
                 {hasToken ? "SoundCloud connected ✓" : hasClient ? "Client ID saved — connect account" : "Step 1: Set up SoundCloud app"}
               </span>
-              {showSetup ? <ChevronUp size={13} color={A.t5} /> : <ChevronDown size={13} color={A.t5} />}
+              {showSetup ? <ChevronUp size={13} color={cssVars.textMuted} /> : <ChevronDown size={13} color={cssVars.textMuted} />}
             </button>
 
             {showSetup && (
-              <div style={{ padding: "14px 16px", borderTop: `1px solid ${A.border}` }}>
-                <p style={{ fontSize: 12, color: A.t4, marginBottom: 10, lineHeight: 1.6 }}>
+              <div style={{ padding: "14px 16px", borderTop: `1px solid ${cssVars.border}` }}>
+                <p style={{ fontSize: 12, color: cssVars.textSecondary, marginBottom: 10, lineHeight: 1.6 }}>
                   You need a free SoundCloud developer app. Takes 2 minutes:
                 </p>
-                <ol style={{ margin: 0, padding: "0 0 0 16px", fontSize: 12, color: A.t4, lineHeight: 2 }}>
+                <ol style={{ margin: 0, padding: "0 0 0 16px", fontSize: 12, color: cssVars.textSecondary, lineHeight: 2 }}>
                   <li>Go to <a href="https://soundcloud.com/you/apps/new" target="_blank" rel="noopener noreferrer" style={{ color: SC_ORANGE }}>soundcloud.com/you/apps/new</a></li>
                   <li>App name: anything (e.g. "CrateMate")</li>
-                  <li>Redirect URI: <code style={{ backgroundColor: "#f1f5f9", padding: "1px 5px", borderRadius: 3, fontSize: 11 }}>{REDIRECT_URI}</code></li>
+                  <li>Redirect URI: <code style={{ backgroundColor: cssVars.bgTertiary, padding: "1px 5px", borderRadius: 3, fontSize: 11 }}>{REDIRECT_URI}</code></li>
                   <li>Copy the <strong>Client ID</strong> and paste below</li>
                 </ol>
                 <div style={{ marginTop: 12, display: "flex", gap: 8 }}>
@@ -196,12 +201,12 @@ export default function SoundCloudExport({ crateName, tracks, onClose }: Props) 
                     value={clientId}
                     onChange={e => setClientId(e.target.value)}
                     placeholder="SoundCloud Client ID"
-                    style={{ flex: 1, height: 36, padding: "0 10px", borderRadius: 7, border: `1px solid ${A.border}`, fontSize: 12, outline: "none", fontFamily: "monospace" }}
+                    style={{ flex: 1, height: 36, padding: "0 10px", borderRadius: 7, border: `1px solid ${cssVars.border}`, fontSize: 12, outline: "none", fontFamily: "monospace", backgroundColor: cssVars.bgTertiary, color: cssVars.textPrimary }}
                   />
                   <button
                     onClick={() => { setSCClientId(clientId.trim()); setShowSetup(false); }}
                     disabled={!clientId.trim()}
-                    style={{ padding: "0 14px", borderRadius: 7, border: "none", backgroundColor: clientId.trim() ? SC_ORANGE : "#e2e8f0", color: clientId.trim() ? "#fff" : A.t5, fontSize: 12, fontWeight: 600, cursor: clientId.trim() ? "pointer" : "not-allowed" }}>
+                    style={{ padding: "0 14px", borderRadius: 7, border: "none", backgroundColor: clientId.trim() ? SC_ORANGE : cssVars.bgHover, color: clientId.trim() ? "#fff" : cssVars.textMuted, fontSize: 12, fontWeight: 600, cursor: clientId.trim() ? "pointer" : "not-allowed" }}>
                     Save
                   </button>
                 </div>
@@ -216,7 +221,7 @@ export default function SoundCloudExport({ crateName, tracks, onClose }: Props) 
                   <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 8 }}>
                     <Check size={13} color="#16a34a" />
                     <span style={{ fontSize: 12, color: "#15803d" }}>Account connected</span>
-                    <button onClick={() => { clearSCToken(); setToken(null); }} style={{ marginLeft: "auto", fontSize: 11, color: A.t5, border: "none", background: "none", cursor: "pointer", textDecoration: "underline" }}>Disconnect</button>
+                    <button onClick={() => { clearSCToken(); setToken(null); }} style={{ marginLeft: "auto", fontSize: 11, color: "var(--text-muted)", border: "none", background: "none", cursor: "pointer", textDecoration: "underline" }}>Disconnect</button>
                   </div>
                 )}
               </div>
@@ -225,9 +230,9 @@ export default function SoundCloudExport({ crateName, tracks, onClose }: Props) 
 
           {/* Progress log */}
           {log.length > 0 && (
-            <div style={{ borderRadius: 8, backgroundColor: "#0f172a", padding: "10px 12px", maxHeight: 160, overflowY: "auto" }}>
+            <div style={{ borderRadius: 8, backgroundColor: "var(--bg-primary)", padding: "10px 12px", maxHeight: 160, overflowY: "auto" }}>
               {log.map((l, i) => (
-                <p key={i} style={{ fontSize: 10, fontFamily: "monospace", color: l.startsWith("  ✓") ? "#86efac" : l.startsWith("  ✗") ? "#fca5a5" : l.startsWith("✓") ? "#86efac" : "#94a3b8", lineHeight: 1.7, margin: 0 }}>{l}</p>
+                <p key={i} style={{ fontSize: 10, fontFamily: "monospace", color: l.startsWith("  ✓") ? "#86efac" : l.startsWith("  ✗") ? "#fca5a5" : l.startsWith("✓") ? "#86efac" : cssVars.textMuted, lineHeight: 1.7, margin: 0 }}>{l}</p>
               ))}
             </div>
           )}
@@ -235,10 +240,10 @@ export default function SoundCloudExport({ crateName, tracks, onClose }: Props) 
           {/* Progress bar */}
           {isRunning && (
             <div>
-              <div style={{ height: 4, borderRadius: 20, backgroundColor: "#e2e8f0", overflow: "hidden" }}>
+              <div style={{ height: 4, borderRadius: 20, backgroundColor: cssVars.border, overflow: "hidden" }}>
                 <div style={{ height: "100%", borderRadius: 20, backgroundColor: SC_ORANGE, width: `${progress}%`, transition: "width 0.3s ease" }} />
               </div>
-              <p style={{ fontSize: 11, color: A.t5, marginTop: 5 }}>
+              <p style={{ fontSize: 11, color: cssVars.textMuted, marginTop: 5 }}>
                 {phase === "searching" ? `Finding tracks on SoundCloud… ${progress}%` : "Creating playlist…"}
               </p>
             </div>
@@ -266,17 +271,17 @@ export default function SoundCloudExport({ crateName, tracks, onClose }: Props) 
           {/* Actions */}
           {phase !== "done" && (
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-              <button onClick={onClose} style={{ padding: "8px 16px", borderRadius: 8, border: `1px solid ${A.border}`, background: "#fff", fontSize: 13, color: A.t4, cursor: "pointer" }}>
+              <button onClick={onClose} style={{ padding: "8px 16px", borderRadius: 8, border: `1px solid ${cssVars.border}`, background: cssVars.bgTertiary, fontSize: 13, color: cssVars.textSecondary, cursor: "pointer" }}>
                 Cancel
               </button>
               {!hasToken ? (
                 <button onClick={handleConnect} disabled={!hasClient || phase === "connecting"}
-                  style={{ display: "flex", alignItems: "center", gap: 7, padding: "8px 18px", borderRadius: 8, border: "none", backgroundColor: hasClient ? SC_ORANGE : "#e2e8f0", color: hasClient ? "#fff" : A.t5, fontSize: 13, fontWeight: 700, cursor: hasClient ? "pointer" : "not-allowed" }}>
+                  style={{ display: "flex", alignItems: "center", gap: 7, padding: "8px 18px", borderRadius: 8, border: "none", backgroundColor: hasClient ? SC_ORANGE : cssVars.bgHover, color: hasClient ? "#fff" : cssVars.textMuted, fontSize: 13, fontWeight: 700, cursor: hasClient ? "pointer" : "not-allowed" }}>
                   {phase === "connecting" ? <><Loader2 size={13} style={{ animation: "spin 0.7s linear infinite" }} /> Connecting…</> : "Connect SoundCloud"}
                 </button>
               ) : (
                 <button onClick={handleExport} disabled={isRunning}
-                  style={{ display: "flex", alignItems: "center", gap: 7, padding: "8px 18px", borderRadius: 8, border: "none", backgroundColor: isRunning ? "#e2e8f0" : SC_ORANGE, color: isRunning ? A.t5 : "#fff", fontSize: 13, fontWeight: 700, cursor: isRunning ? "not-allowed" : "pointer" }}>
+                  style={{ display: "flex", alignItems: "center", gap: 7, padding: "8px 18px", borderRadius: 8, border: "none", backgroundColor: isRunning ? cssVars.bgHover : SC_ORANGE, color: isRunning ? cssVars.textMuted : "#fff", fontSize: 13, fontWeight: 700, cursor: isRunning ? "not-allowed" : "pointer" }}>
                   {isRunning
                     ? <><Loader2 size={13} style={{ animation: "spin 0.7s linear infinite" }} /> Exporting…</>
                     : `Export ${tracks.length} Tracks →`}

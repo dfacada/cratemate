@@ -56,7 +56,7 @@ type Status = "idle" | "loading" | "ready" | "error";
 interface PlayerContextValue {
   // Auth
   isAuthenticated: boolean;
-  connectSpotify: () => void;
+  connectSpotify: () => Promise<void>;
   disconnectSpotify: () => void;
 
   // SDK state
@@ -750,9 +750,9 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
   // ── Auth Controls ───────────────────────────────────────────────
 
-  const connectSpotify = useCallback(() => {
+  const connectSpotify = useCallback(async () => {
     try {
-      const authUrl = getSpotifyAuthUrl();
+      const authUrl = await getSpotifyAuthUrl();
       const width = 500;
       const height = 600;
       const left = window.innerWidth / 2 - width / 2;

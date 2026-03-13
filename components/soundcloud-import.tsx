@@ -3,9 +3,13 @@ import { useState } from "react";
 import { Loader2, AlertCircle, Check } from "lucide-react";
 import type { TrackInput } from "@/app/api/analyze/route";
 
-const A = {
-  border: "#e2e8f0", t1: "#0f172a", t3: "#334155", t4: "#64748b", t5: "#94a3b8",
-  accent: "#00B4D8",
+const cssVars = {
+  border: "var(--border)",
+  textPrimary: "var(--text-primary)",
+  textSecondary: "var(--text-secondary)",
+  textMuted: "var(--text-muted)",
+  bgTertiary: "var(--bg-tertiary)",
+  accentSecondary: "var(--accent-secondary)",
 };
 
 interface Props {
@@ -88,9 +92,9 @@ export default function SoundCloudImport({ onTracks }: Props) {
           placeholder="https://soundcloud.com/artist/sets/playlist-name"
           style={{
             flex: 1, height: 42, padding: "0 14px", borderRadius: 9,
-            border: `1.5px solid ${error ? "#fca5a5" : A.border}`,
-            fontSize: 13, color: A.t1, fontFamily: "inherit",
-            outline: "none", backgroundColor: "#fafafa",
+            border: `1.5px solid ${error ? "#fca5a5" : cssVars.border}`,
+            fontSize: 13, color: cssVars.textPrimary, fontFamily: "inherit",
+            outline: "none", backgroundColor: cssVars.bgTertiary,
           }}
         />
         <button
@@ -98,8 +102,8 @@ export default function SoundCloudImport({ onTracks }: Props) {
           disabled={!url || status === "loading"}
           style={{
             padding: "0 20px", borderRadius: 9, border: "none",
-            backgroundColor: status === "done" ? "#16a34a" : url ? "#FF5500" : "#e2e8f0",
-            color: url ? "#fff" : A.t5,
+            backgroundColor: status === "done" ? "#16a34a" : url ? cssVars.accentSecondary : "var(--bg-hover)",
+            color: url ? "#fff" : cssVars.textMuted,
             fontSize: 13, fontWeight: 600, cursor: url ? "pointer" : "not-allowed",
             fontFamily: "inherit", whiteSpace: "nowrap",
             display: "flex", alignItems: "center", gap: 8,
@@ -120,7 +124,7 @@ export default function SoundCloudImport({ onTracks }: Props) {
       )}
 
       {status === "loading" && (
-        <p style={{ fontSize: 11, color: A.t5, marginTop: 6 }}>
+        <p style={{ fontSize: 11, color: cssVars.textMuted, marginTop: 6 }}>
           Fetching playlist from SoundCloud…
         </p>
       )}

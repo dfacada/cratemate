@@ -138,18 +138,23 @@ function SpotifySection() {
     return () => window.removeEventListener("message", handleMessage);
   }, []);
 
-  const handleConnect = () => {
-    const authUrl = getSpotifyAuthUrl();
-    // Open in popup window
-    const width = 450;
-    const height = 700;
-    const left = window.screenX + (window.innerWidth - width) / 2;
-    const top = window.screenY + (window.innerHeight - height) / 2;
-    window.open(
-      authUrl,
-      "spotify-auth",
-      `width=${width},height=${height},left=${left},top=${top},toolbar=no,menubar=no`
-    );
+  const handleConnect = async () => {
+    try {
+      const authUrl = await getSpotifyAuthUrl();
+      // Open in popup window
+      const width = 450;
+      const height = 700;
+      const left = window.screenX + (window.innerWidth - width) / 2;
+      const top = window.screenY + (window.innerHeight - height) / 2;
+      window.open(
+        authUrl,
+        "spotify-auth",
+        `width=${width},height=${height},left=${left},top=${top},toolbar=no,menubar=no`
+      );
+    } catch (err: any) {
+      console.error("Failed to open Spotify auth:", err);
+      alert("Could not connect to Spotify. Please try again.");
+    }
   };
 
   const handleDisconnect = () => {
