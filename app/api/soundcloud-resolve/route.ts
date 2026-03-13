@@ -188,17 +188,15 @@ export async function GET(req: NextRequest) {
     }
 
     // If there are stub tracks, try to resolve them via the SC API
+    // Wrap in a timeout so we return partial results rather than hanging
     if (stubIds.length > 0) {
-      // Extract client_id from the page scripts
       const clientIdMatch = html.match(/client_id=([a-zA-Z0-9]{32})/);
       const clientId = clientIdMatch?.[1];
 
       if (clientId) {
-        // SC API accepts up to 50 IDs at once
-        const batchSize = 50;
-        for (let i = 0; i < stubIds.length; i += batchSize) {
-          const batch = stubIds.slice(i, i + batchSize);
-          try {
+        try {
+          const resolveStubs = async () => {
+            const batch = stubIds.slice(0, 50); // max 50 IDs at once
             const apiRes = await fetch(
               `https://api-v2.soundcloud.com/tracks?ids=${batch.join(",")}&client_id=${clientId}`,
               {
@@ -206,19 +204,24 @@ export async function GET(req: NextRequest) {
                   "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
                   Accept: "application/json",
                 },
-                signal: AbortSignal.timeout(10000),
+                signal: AbortSignal.timeout(8000),
               }
             );
             if (apiRes.ok) {
-              const resolved: SCHydrationTrack[] = await apiRes.json();
-              fullTracks.push(...resolved);
+              return (await apiRes.json()) as SCHydrationTrack[];
             }
-          } catch (err) {
-            console.warn("Failed to resolve stub tracks batch:", err);
-          }
+            return [];
+          };
+
+          // Race: resolve stubs or give up after 8s
+          const resolved = await Promise.race([
+            resolveStubs(),
+            new Promise<SCHydrationTrack[]>((resolve) => setTimeout(() => resolve([]), 8000)),
+          ]);
+          fullTracks.push(...resolved);
+        } catch (err) {
+          console.warn("Stub track resolution failed, returning partial results:", err);
         }
-      } else {
-        console.warn(`Could not extract SC client_id; ${stubIds.length} tracks remain unresolved`);
       }
     }
 
