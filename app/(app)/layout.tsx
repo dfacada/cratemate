@@ -1,11 +1,13 @@
 import Sidebar from "@/components/sidebar";
 import TopBar from "@/components/top-bar";
 import PlayerBar from "@/components/player-bar";
+import ThemeLoader from "@/components/theme-loader";
 import { PlayerProvider } from "@/context/player-context";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <PlayerProvider>
+      <ThemeLoader />
       <Sidebar />
 
       {/* Main content area — offsets handled via globals.css */}

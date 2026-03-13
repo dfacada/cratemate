@@ -123,7 +123,7 @@ export default function PlayerBar() {
       </div>
 
       {/* Main Player Container */}
-      <div className="px-4 sm:px-6 py-3 flex items-center gap-4">
+      <div className="px-4 sm:px-6 py-3 flex items-center gap-4" style={{ position: "relative" }}>
         {/* Left: Album Art + Track Info */}
         <div className="flex items-center gap-3 flex-1 min-w-0">
           {/* Album Art */}
@@ -227,8 +227,12 @@ export default function PlayerBar() {
           </div>
         </div>
 
-        {/* Center: Transport Controls */}
-        <div className="flex items-center gap-3 flex-shrink-0">
+        {/* Center: Transport Controls — absolutely centered on page */}
+        <div className="flex items-center gap-3 flex-shrink-0" style={{
+          position: "absolute",
+          left: "50%",
+          transform: "translateX(-50%)",
+        }}
           {/* Shuffle */}
           <button
             onClick={() => setShuffle(!shuffle)}
@@ -307,7 +311,7 @@ export default function PlayerBar() {
         </div>
 
         {/* Right: Volume + Time */}
-        <div className="flex items-center gap-3 flex-shrink-0 ml-auto">
+        <div className="flex items-center gap-3 flex-shrink-0" style={{ marginLeft: "auto" }}
           {/* Time Display */}
           <div
             className="text-xs font-mono hidden md:flex items-center gap-1"

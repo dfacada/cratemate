@@ -465,18 +465,36 @@ const ACCENT_COLORS = [
   { label: "Orange", value: "#F59E0B" },
 ];
 
+function applyAccentColor(color: string) {
+  if (typeof document === "undefined") return;
+  document.documentElement.style.setProperty("--accent-primary", color);
+}
+
 function AppearanceSection() {
   const [settings, setSettings] = useState<AppearanceSettings>({ density: "comfortable", accentColor: "#00d4aa" });
   const [saved, setSaved] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setSettings(getAppearance());
+    const appearance = getAppearance();
+    setSettings(appearance);
+    // Apply saved accent color on load
+    if (appearance.accentColor && appearance.accentColor !== "#00d4aa") {
+      applyAccentColor(appearance.accentColor);
+    }
     setMounted(true);
   }, []);
 
+  // Live preview: apply accent color as user clicks swatches
+  useEffect(() => {
+    if (mounted) {
+      applyAccentColor(settings.accentColor);
+    }
+  }, [settings.accentColor, mounted]);
+
   const handleSave = () => {
     localStorage.setItem(APPEARANCE_KEY, JSON.stringify(settings));
+    applyAccentColor(settings.accentColor);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };

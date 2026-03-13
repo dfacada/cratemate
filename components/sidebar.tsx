@@ -280,34 +280,6 @@ export default function Sidebar() {
           </div>
         </nav>
 
-        {/* User Profile Footer */}
-        <div
-          className="px-4 py-4 border-t flex items-center gap-3"
-          style={{ borderColor: "var(--border-subtle)" }}
-        >
-          <div
-            className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0"
-            style={{
-              backgroundColor: "rgba(0,212,170,0.15)",
-              color: "var(--accent-primary)",
-              fontWeight: 700,
-              fontSize: "0.875rem",
-            }}
-          >
-            DJ
-          </div>
-          <div style={{ minWidth: 0 }}>
-            <div
-              style={{
-                fontSize: "0.875rem",
-                fontWeight: 600,
-                color: "var(--text-primary)",
-              }}
-            >
-              CrateMate
-            </div>
-          </div>
-        </div>
       </motion.div>
 
       {/* ── Mobile Top Bar ── */}
