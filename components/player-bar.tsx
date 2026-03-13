@@ -232,7 +232,7 @@ export default function PlayerBar() {
           position: "absolute",
           left: "50%",
           transform: "translateX(-50%)",
-        }}
+        }}>
           {/* Shuffle */}
           <button
             onClick={() => setShuffle(!shuffle)}
@@ -311,7 +311,7 @@ export default function PlayerBar() {
         </div>
 
         {/* Right: Volume + Time */}
-        <div className="flex items-center gap-3 flex-shrink-0" style={{ marginLeft: "auto" }}
+        <div className="flex items-center gap-3 flex-shrink-0" style={{ marginLeft: "auto" }}>
           {/* Time Display */}
           <div
             className="text-xs font-mono hidden md:flex items-center gap-1"
