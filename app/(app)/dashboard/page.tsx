@@ -1,21 +1,21 @@
 "use client";
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Search, Archive, Disc3, Radio, TrendingUp, Gem, ArrowRight, Zap } from "lucide-react";
-import { mockRadarTracks } from "@/data/mockCrate";
+import { Search, Archive, Radio, TrendingUp, Gem, ArrowRight, Music2, Clock } from "lucide-react";
 import { getCrates, type Crate } from "@/lib/crates";
-
-const A = { bg:"#F0F4F8", panel:"#ffffff", border:"#e2e8f0", t1:"#0f172a", t2:"#1e293b", t3:"#334155", t4:"#64748b", t5:"#94a3b8", accent:"#00B4D8", accentBg:"rgba(0,180,216,0.09)", accentBorder:"rgba(0,180,216,0.2)" };
-
-const card = { borderRadius:12, border:`1px solid ${A.border}`, backgroundColor:A.panel, padding:16, boxShadow:"0 1px 3px rgba(0,0,0,0.04)" };
 
 export default function DashboardPage() {
   const [crates, setCrates] = useState<Crate[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [djName, setDjName] = useState("DJ");
 
   useEffect(() => {
     setCrates(getCrates());
     setLoaded(true);
+    try {
+      const p = JSON.parse(localStorage.getItem("cratemate_profile") || "{}");
+      if (p.djName) setDjName(p.djName);
+    } catch {}
   }, []);
 
   const totalTracks = crates.reduce((sum, c) => sum + c.tracks.length, 0);
@@ -23,24 +23,16 @@ export default function DashboardPage() {
 
   // Recent tracks: flatten all crate tracks, take latest 5
   const recentTracks = crates
-    .flatMap(c => c.tracks.map(t => ({ ...t, crateName: c.name })))
+    .flatMap(c => c.tracks.map(t => ({ ...t, crateName: c.name, crateCreatedAt: c.createdAt })))
+    .sort((a, b) => (b.crateCreatedAt || 0) - (a.crateCreatedAt || 0))
     .slice(0, 5);
 
   const statCards = [
-    { label:"Tracks Catalogued", value: loaded ? String(totalTracks) : "—", icon:Disc3, color:"#00B4D8", bg:"rgba(0,180,216,0.1)" },
-    { label:"Active Crates", value: loaded ? String(crates.length) : "—", icon:Archive, color:"#3B82F6", bg:"rgba(59,130,246,0.1)" },
-    { label:"Radar Signals", value:"48", icon:Radio, color:"#F59E0B", bg:"rgba(245,158,11,0.1)" },
-    { label:"Gems Found", value: loaded ? String(Math.min(totalTracks, 93)) : "—", icon:Gem, color:"#8B5CF6", bg:"rgba(139,92,246,0.1)" },
+    { label: "Total Tracks", value: loaded ? String(totalTracks) : "—", icon: Music2 },
+    { label: "Active Crates", value: loaded ? String(crates.length) : "—", icon: Archive },
+    { label: "Digs Completed", value: loaded ? String(crates.length) : "—", icon: Search },
+    { label: "Top Genre", value: "House", icon: TrendingUp },
   ];
-
-  // Profile name from localStorage
-  const [djName, setDjName] = useState("DJ");
-  useEffect(() => {
-    try {
-      const p = JSON.parse(localStorage.getItem("cratemate_profile") || "{}");
-      if (p.djName) setDjName(p.djName);
-    } catch {}
-  }, []);
 
   const greeting = (() => {
     const h = new Date().getHours();
@@ -49,103 +41,271 @@ export default function DashboardPage() {
     return "Good evening";
   })();
 
+  function timeAgo(ts: number): string {
+    const diff = Date.now() - ts;
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return "just now";
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    const days = Math.floor(hrs / 24);
+    if (days < 30) return `${days}d ago`;
+    return new Date(ts).toLocaleDateString();
+  }
+
   return (
-    <div style={{ display:"flex", flexDirection:"column", gap:20 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
+      {/* Header */}
       <div>
-        <h1 style={{ fontSize:22, fontWeight:700, color:A.t1, letterSpacing:"-0.02em" }}>{greeting}, {djName}</h1>
-        <p style={{ fontSize:13, color:A.t4, marginTop:4 }}>You have {mockRadarTracks.filter(t=>t.undergroundScore>=85).length} high-signal radar hits waiting.</p>
+        <h1 style={{
+          fontSize: 28,
+          fontWeight: 700,
+          color: "var(--text-primary)",
+          letterSpacing: "-0.02em",
+          marginBottom: 4,
+        }}>
+          {greeting}, {djName}
+        </h1>
+        <p style={{ fontSize: 14, color: "var(--text-secondary)" }}>
+          {loaded ? `${totalTracks} tracks in your crate` : "Load your collection"}
+        </p>
       </div>
 
-      {/* Stats */}
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:12 }}>
-        {statCards.map(({ label, value, icon:Icon, color, bg }) => (
-          <div key={label} style={card}>
-            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:12 }}>
-              <div style={{ width:32, height:32, borderRadius:8, backgroundColor:bg, display:"flex", alignItems:"center", justifyContent:"center" }}>
-                <Icon size={15} color={color} />
+      {/* Stats Grid */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16 }}>
+        {statCards.map(({ label, value, icon: Icon }) => (
+          <div
+            key={label}
+            style={{
+              backgroundColor: "var(--bg-secondary)",
+              border: "1px solid var(--border)",
+              borderRadius: 12,
+              padding: 20,
+              display: "flex",
+              flexDirection: "column",
+              gap: 12,
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div style={{
+                width: 40,
+                height: 40,
+                borderRadius: 10,
+                backgroundColor: "rgba(0,212,170,0.1)",
+                border: "1px solid rgba(0,212,170,0.2)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}>
+                <Icon size={20} style={{ color: "var(--accent-primary)" }} />
               </div>
-              <TrendingUp size={13} color={A.t5} />
+              <TrendingUp size={14} style={{ color: "var(--text-muted)" }} />
             </div>
-            <p style={{ fontSize:26, fontWeight:700, color:A.t1, lineHeight:1 }}>{value}</p>
-            <p style={{ fontSize:12, color:A.t4, marginTop:4 }}>{label}</p>
+            <div>
+              <p style={{ fontSize: 24, fontWeight: 700, color: "var(--text-primary)", lineHeight: 1 }}>
+                {value}
+              </p>
+              <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 4 }}>{label}</p>
+            </div>
           </div>
         ))}
       </div>
 
-      {/* Quick actions */}
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:12 }}>
-        {[
-          { label:"New Dig", href:"/new-dig", icon:Search, desc:"Start a new crate session" },
-          { label:"Open Radar", href:"/radar", icon:Radio, desc:"Scan underground signals" },
-          { label:"Build Set", href:"/set-builder", icon:Disc3, desc:"Arrange your crate into a set" },
-        ].map(({ label, href, icon:Icon, desc }) => (
-          <Link key={href} href={href} style={{ display:"flex", alignItems:"center", gap:12, ...card, textDecoration:"none" }}>
-            <div style={{ width:36, height:36, borderRadius:8, backgroundColor:A.accentBg, border:`1px solid ${A.accentBorder}`, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
-              <Icon size={16} color={A.accent} />
-            </div>
-            <div style={{ flex:1, minWidth:0 }}>
-              <p style={{ fontSize:13, fontWeight:600, color:A.t1 }}>{label}</p>
-              <p style={{ fontSize:11, color:A.t4, marginTop:2 }}>{desc}</p>
-            </div>
-            <ArrowRight size={14} color={A.t5} style={{ flexShrink:0 }} />
-          </Link>
-        ))}
+      {/* Quick Actions */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+        <Link href="/new-dig" style={{
+          backgroundColor: "var(--accent-primary)",
+          color: "#fff",
+          border: "none",
+          borderRadius: 10,
+          padding: "16px 20px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 8,
+          fontSize: 14,
+          fontWeight: 600,
+          textDecoration: "none",
+          cursor: "pointer",
+          transition: "all 0.2s",
+        }}
+        onMouseEnter={(e) => e.currentTarget.style.opacity = "0.9"}
+        onMouseLeave={(e) => e.currentTarget.style.opacity = "1"}
+        >
+          <Search size={16} />
+          Start New Dig
+        </Link>
+        <div style={{
+          backgroundColor: "rgba(76,175,80,0.15)",
+          border: "1px solid rgba(76,175,80,0.3)",
+          borderRadius: 10,
+          padding: "16px 20px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 8,
+          fontSize: 14,
+          fontWeight: 600,
+          color: "#4CAF50",
+          cursor: "pointer",
+          transition: "all 0.2s",
+        }}
+        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "rgba(76,175,80,0.2)"}
+        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "rgba(76,175,80,0.15)"}
+        >
+          Connect Spotify
+        </div>
       </div>
 
-      {/* Recent finds + Active Crate */}
-      <div style={{ display:"grid", gridTemplateColumns:"1fr 360px", gap:16 }}>
-        <div style={card}>
-          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:16 }}>
-            <p style={{ fontSize:13, fontWeight:600, color:A.t2 }}>Recent Finds</p>
-            <Link href="/crate" style={{ fontSize:12, color:A.accent, textDecoration:"none", display:"flex", alignItems:"center", gap:4 }}>View crate <ArrowRight size={11} /></Link>
+      {/* Recent Activity Section */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: 16 }}>
+        {/* Recent Tracks */}
+        <div style={{
+          backgroundColor: "var(--bg-secondary)",
+          border: "1px solid var(--border)",
+          borderRadius: 12,
+          padding: 20,
+        }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+            <p style={{ fontSize: 14, fontWeight: 600, color: "var(--text-primary)" }}>Recent Finds</p>
+            <Link href="/crate" style={{
+              fontSize: 12,
+              color: "var(--accent-primary)",
+              textDecoration: "none",
+              display: "flex",
+              alignItems: "center",
+              gap: 4,
+            }}>
+              View all <ArrowRight size={12} />
+            </Link>
           </div>
+
           {recentTracks.length === 0 ? (
-            <p style={{ fontSize:13, color:A.t5, padding:"20px 0", textAlign:"center" }}>No tracks yet. Start a New Dig!</p>
-          ) : recentTracks.map((t, i) => (
-            <div key={`${t.artist}-${t.title}-${i}`} style={{ display:"flex", alignItems:"center", gap:12, padding:"9px 0", borderBottom:`1px solid ${A.border}` }}>
-              <div style={{ flex:1, minWidth:0 }}>
-                <p style={{ fontSize:13, fontWeight:500, color:A.t1, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{t.artist}</p>
-                <p style={{ fontSize:11, color:A.t4, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{t.title}</p>
-              </div>
-              <span style={{ fontSize:12, color:A.t4, fontFamily:"monospace", flexShrink:0 }}>{t.label || ""}</span>
-              {t.bpm && <span style={{ fontSize:12, color:A.t5, fontFamily:"monospace", flexShrink:0 }}>{t.bpm}</span>}
+            <p style={{ fontSize: 13, color: "var(--text-muted)", padding: "32px 0", textAlign: "center" }}>
+              No tracks yet. Start a New Dig to get rolling!
+            </p>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {recentTracks.map((t, i) => (
+                <div
+                  key={`${t.artist}-${t.title}-${i}`}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 12,
+                    paddingBottom: 12,
+                    borderBottom: i < recentTracks.length - 1 ? "1px solid var(--border)" : "none",
+                  }}
+                >
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{
+                      fontSize: 13,
+                      fontWeight: 500,
+                      color: "var(--text-primary)",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}>
+                      {t.artist}
+                    </p>
+                    <p style={{
+                      fontSize: 12,
+                      color: "var(--text-muted)",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}>
+                      {t.title}
+                    </p>
+                  </div>
+                  {t.key && (
+                    <span style={{
+                      fontSize: 11,
+                      fontWeight: 600,
+                      color: "var(--accent-primary)",
+                      backgroundColor: "rgba(0,212,170,0.1)",
+                      padding: "2px 6px",
+                      borderRadius: 4,
+                      flexShrink: 0,
+                    }}>
+                      {t.key}
+                    </span>
+                  )}
+                </div>
+              ))}
             </div>
-          ))}
+          )}
         </div>
 
-        <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+        {/* Sidebar */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {/* Active Crate */}
           {topCrate ? (
-            <div style={card}>
-              <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:12 }}>
-                <p style={{ fontSize:13, fontWeight:600, color:A.t2 }}>Latest Crate</p>
-                <Link href="/crate" style={{ fontSize:12, color:A.accent, textDecoration:"none" }}>Open →</Link>
+            <div style={{
+              backgroundColor: "var(--bg-secondary)",
+              border: "1px solid var(--border)",
+              borderRadius: 12,
+              padding: 16,
+            }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+                <p style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)" }}>Latest Crate</p>
+                <Link href="/crate" style={{ fontSize: 11, color: "var(--accent-primary)", textDecoration: "none" }}>
+                  Open →
+                </Link>
               </div>
-              <div style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 12px", borderRadius:8, backgroundColor:A.accentBg, border:`1px solid ${A.accentBorder}` }}>
-                <div style={{ width:28, height:28, borderRadius:6, backgroundColor:"rgba(59,130,246,0.1)", display:"flex", alignItems:"center", justifyContent:"center" }}>
-                  <Archive size={13} color="#3B82F6" />
+              <div style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                padding: "12px",
+                borderRadius: 8,
+                backgroundColor: "rgba(0,212,170,0.08)",
+                border: "1px solid rgba(0,212,170,0.15)",
+              }}>
+                <div style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: 6,
+                  backgroundColor: "rgba(0,212,170,0.15)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}>
+                  <Archive size={16} style={{ color: "var(--accent-primary)" }} />
                 </div>
-                <div>
-                  <p style={{ fontSize:13, fontWeight:600, color:A.t1 }}>{topCrate.name}</p>
-                  <p style={{ fontSize:11, color:A.t4 }}>{topCrate.tracks.length} tracks</p>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)" }}>{topCrate.name}</p>
+                  <p style={{ fontSize: 11, color: "var(--text-muted)" }}>{topCrate.tracks.length} tracks</p>
                 </div>
               </div>
             </div>
           ) : (
-            <div style={card}>
-              <p style={{ fontSize:13, fontWeight:600, color:A.t2, marginBottom:8 }}>Latest Crate</p>
-              <p style={{ fontSize:12, color:A.t5 }}>No crates saved yet.</p>
+            <div style={{
+              backgroundColor: "var(--bg-secondary)",
+              border: "1px solid var(--border)",
+              borderRadius: 12,
+              padding: 16,
+            }}>
+              <p style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)", marginBottom: 8 }}>
+                Latest Crate
+              </p>
+              <p style={{ fontSize: 12, color: "var(--text-muted)" }}>No crates saved yet.</p>
             </div>
           )}
 
-          <div style={card}>
-            <p style={{ fontSize:11, fontWeight:600, letterSpacing:"0.08em", textTransform:"uppercase" as const, color:A.t5, marginBottom:10 }}>Top Radar Hit</p>
-            {mockRadarTracks.slice(0,1).map(t => (
-              <div key={t.id}>
-                <p style={{ fontSize:14, fontWeight:700, color:A.accent }}>{t.artist}</p>
-                <p style={{ fontSize:12, color:A.t3 }}>{t.title}</p>
-                <p style={{ fontSize:11, color:A.t4, marginTop:6, lineHeight:1.5 }}>{t.reason.slice(0, 80)}…</p>
-              </div>
-            ))}
+          {/* Getting Started */}
+          <div style={{
+            backgroundColor: "rgba(0,212,170,0.08)",
+            border: "1px solid rgba(0,212,170,0.15)",
+            borderRadius: 12,
+            padding: 16,
+          }}>
+            <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--text-muted)", marginBottom: 8 }}>
+              Quick Tip
+            </p>
+            <p style={{ fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.5 }}>
+              Import a SoundCloud or Spotify playlist to get started analyzing tracks.
+            </p>
           </div>
         </div>
       </div>

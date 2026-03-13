@@ -1,22 +1,23 @@
 "use client";
+
 import { useState } from "react";
-import { Trash2, Download, ListMusic, ArrowUpDown, Music2, PlayCircle } from "lucide-react";
-import { type CrateTrack } from "@/lib/crates";
+import {
+  Trash2,
+  Download,
+  ListMusic,
+  ArrowUpDown,
+  Music2,
+  PlayCircle,
+  MoreVertical,
+} from "lucide-react";
+import type { CrateTrack } from "@/lib/crates";
+import type { Track } from "@/types/track";
 import { mockTracks } from "@/data/mockTracks";
-import { Track } from "@/types/track";
 import PlayButton from "@/components/play-button";
-import { usePlayer, PlayerTrack } from "@/context/player-context";
+import { usePlayer, type PlayerTrack } from "@/context/player-context";
+import { getCamelotColor } from "@/lib/theme";
 
-const KEY_COLORS: Record<string, string> = {
-  "1A": "#FF6B6B", "2A": "#FF8E53", "3A": "#FFC300", "4A": "#C5E336", "5A": "#6BCB77", "6A": "#4D96FF",
-  "7A": "#9B72CF", "8A": "#FF6B9D", "9A": "#56CFE1", "10A": "#FF9A3C", "11A": "#80F2A6", "12A": "#FFD6A5",
-  "1B": "#FF4040", "2B": "#FF6B2B", "3B": "#FFA500", "4B": "#A8E063", "5B": "#2ECC40", "6B": "#0074D9",
-  "7B": "#7B2FBE", "8B": "#FF2D6C", "9B": "#17B8D1", "10B": "#E07B00", "11B": "#4ADE80", "12B": "#FCC89B",
-};
-
-type SortKey = "artist" | "bpm" | "key" | "title";
-
-const A = { panel: "#fff", border: "#e2e8f0", t1: "#0f172a", t4: "#64748b", t5: "#94a3b8", accent: "#00B4D8", accentBg: "rgba(0,180,216,0.09)" };
+type SortKey = "artist" | "bpm" | "key" | "title" | "energy";
 
 interface CrateTableProps {
   /** Real crate tracks from localStorage — if provided, takes priority */
@@ -29,201 +30,708 @@ interface CrateTableProps {
   onExport?: () => void;
 }
 
-export default function CrateTable({ crateTracks, crateName, onRemoveTrack, tracks, onBuildSet, onExport }: CrateTableProps) {
+interface TableRow {
+  id: string;
+  artist: string;
+  title: string;
+  label?: string;
+  bpm?: number;
+  key?: string;
+  energy?: number;
+  year?: number;
+  genre?: string;
+  source: string;
+  duration?: number; // in seconds
+}
+
+export default function CrateTable({
+  crateTracks,
+  crateName,
+  onRemoveTrack,
+  tracks,
+  onBuildSet,
+  onExport,
+}: CrateTableProps) {
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
-  const { playAll, queue } = usePlayer();
+  const { playAll } = usePlayer();
 
-  // Normalize: if crateTracks provided, map them to displayable rows; else fall back to legacy tracks prop
-  const rows: {
-    id: string; artist: string; title: string; label?: string; bpm?: number;
-    key?: string; year?: number; genre?: string; source: string;
-  }[] = crateTracks
+  // Normalize: if crateTracks provided, map them to displayable rows; else fall back to legacy
+  const rows: TableRow[] = crateTracks
     ? crateTracks.map((t, i) => ({
-        id: `ct-${i}`, artist: t.artist, title: t.title, label: t.label,
-        bpm: t.bpm, key: t.key, year: t.year, genre: t.genre,
-        source: t.source === "original" ? "original" : "rec",
+        id: `ct-${i}`,
+        artist: t.artist,
+        title: t.title,
+        label: t.label,
+        bpm: t.bpm,
+        key: t.key,
+        energy: t.energy,
+        year: t.year,
+        genre: t.genre,
+        source: t.source === "original" ? "original" : "recommended",
+        duration: t.duration,
       }))
-    : (tracks || mockTracks.slice(0, 8)).map(t => ({
-        id: t.id, artist: t.artist, title: t.title, label: t.label,
-        bpm: t.bpm, key: t.key, year: t.year, genre: t.genre?.join(", "),
+    : (tracks || mockTracks.slice(0, 8)).map((t) => ({
+        id: t.id,
+        artist: t.artist,
+        title: t.title,
+        label: t.label,
+        bpm: t.bpm,
+        key: t.key,
+        energy: t.energy,
+        year: t.year,
+        genre: Array.isArray(t.genre) ? t.genre.join(", ") : t.genre,
         source: t.source?.replace(/_/g, " ") || "",
+        duration: undefined,
       }));
 
+  // Sorting
   const toggleSort = (k: SortKey) => {
-    if (sortKey === k) setSortDir(d => d === "asc" ? "desc" : "asc");
-    else { setSortKey(k); setSortDir("asc"); }
+    if (sortKey === k) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(k);
+      setSortDir("asc");
+    }
   };
 
   const sorted = [...rows].sort((a, b) => {
     if (!sortKey) return 0;
-    const av = a[sortKey], bv = b[sortKey];
-    if (typeof av === "number" && typeof bv === "number") return sortDir === "asc" ? av - bv : bv - av;
-    return sortDir === "asc" ? String(av ?? "").localeCompare(String(bv ?? "")) : String(bv ?? "").localeCompare(String(av ?? ""));
+    const av = a[sortKey];
+    const bv = b[sortKey];
+
+    if (typeof av === "number" && typeof bv === "number") {
+      return sortDir === "asc" ? av - bv : bv - av;
+    }
+
+    return sortDir === "asc"
+      ? String(av ?? "").localeCompare(String(bv ?? ""))
+      : String(bv ?? "").localeCompare(String(av ?? ""));
   });
 
-  const bpms = rows.filter(r => r.bpm).map(r => r.bpm!);
+  // Stats
+  const bpms = rows.filter((r) => r.bpm).map((r) => r.bpm!);
   const avgBpm = bpms.length ? Math.round(bpms.reduce((a, b) => a + b, 0) / bpms.length) : 0;
+  const totalDuration =
+    rows.reduce((acc, r) => acc + (r.duration || 0), 0) / 60;
 
-  const thStyle = {
-    padding: "10px 14px", textAlign: "left" as const, fontSize: 10, fontWeight: 600,
-    letterSpacing: "0.07em", textTransform: "uppercase" as const, color: A.t5,
-    borderBottom: `1px solid ${A.border}`, backgroundColor: "#f8fafc",
+  // Format duration MM:SS
+  const formatDuration = (seconds?: number) => {
+    if (!seconds) return "—";
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.round(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
-  const tdStyle = {
-    padding: "9px 14px", fontSize: 13, borderBottom: "1px solid #f8fafc", verticalAlign: "middle" as const,
+
+  // Empty state
+  if (rows.length === 0) {
+    return (
+      <div
+        style={{
+          borderRadius: 12,
+          border: "1px solid var(--border)",
+          backgroundColor: "var(--bg-secondary)",
+          padding: "36px 24px",
+          textAlign: "center",
+        }}
+      >
+        <Music2
+          size={32}
+          style={{
+            color: "var(--text-muted)",
+            marginBottom: 12,
+            opacity: 0.5,
+          }}
+        />
+        <p style={{ fontSize: 13, color: "var(--text-secondary)" }}>
+          No tracks yet. Start a New Dig to find tracks.
+        </p>
+      </div>
+    );
+  }
+
+  // Table styles
+  const thStyle: React.CSSProperties = {
+    padding: "10px 14px",
+    textAlign: "left",
+    fontSize: 10,
+    fontWeight: 600,
+    letterSpacing: "0.07em",
+    textTransform: "uppercase",
+    color: "var(--text-muted)",
+    borderBottom: "1px solid var(--border)",
+    backgroundColor: "var(--bg-tertiary)",
+  };
+
+  const tdStyle: React.CSSProperties = {
+    padding: "10px 14px",
+    fontSize: 13,
+    borderBottom: "1px solid var(--border-subtle)",
+    verticalAlign: "middle",
   };
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-      {/* Stats bar */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 16, fontSize: 12, color: A.t4 }}>
+      {/* Header with stats and controls */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          flexWrap: "wrap",
+          gap: 12,
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 16,
+            fontSize: 12,
+            color: "var(--text-secondary)",
+            flexWrap: "wrap",
+          }}
+        >
           <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <Music2 size={13} color={A.accent} />
-            <b style={{ color: A.t1 }}>{rows.length}</b> tracks
+            <Music2 size={13} color="var(--accent-primary)" />
+            <b style={{ color: "var(--text-primary)" }}>{rows.length}</b> tracks
           </span>
-          {avgBpm > 0 && <span>Avg BPM: <b style={{ color: A.t1, fontFamily: "monospace" }}>{avgBpm}</b></span>}
-          {crateName && <span style={{ color: A.t5 }}>in <b style={{ color: A.t1 }}>{crateName}</b></span>}
+          {avgBpm > 0 && (
+            <span>
+              Avg <b style={{ color: "var(--text-primary)", fontFamily: "monospace" }}>{avgBpm}</b> BPM
+            </span>
+          )}
+          {totalDuration > 0 && (
+            <span>
+              <b style={{ color: "var(--text-primary)" }}>
+                {Math.round(totalDuration)}
+              </b>{" "}
+              min
+            </span>
+          )}
+          {crateName && (
+            <span style={{ color: "var(--text-muted)" }}>
+              in <b style={{ color: "var(--text-primary)" }}>{crateName}</b>
+            </span>
+          )}
         </div>
-        <div style={{ display: "flex", gap: 8 }}>
+
+        {/* Control buttons */}
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           {rows.length > 0 && (
             <button
               onClick={() => {
-                const playerTracks: PlayerTrack[] = rows.map(r => ({
-                  id: r.id, artist: r.artist, title: r.title,
-                  label: r.label, bpm: r.bpm, key: r.key,
+                const playerTracks: PlayerTrack[] = sorted.map((r) => ({
+                  id: r.id,
+                  artist: r.artist,
+                  title: r.title,
+                  label: r.label,
+                  bpm: r.bpm,
+                  key: r.key,
+                  energy: r.energy,
                 }));
                 playAll(playerTracks);
               }}
               style={{
-                display: "flex", alignItems: "center", gap: 6, padding: "6px 12px", borderRadius: 8,
-                border: "none", backgroundColor: "#FF5500", fontSize: 12, color: "#fff",
-                cursor: "pointer", fontFamily: "inherit", fontWeight: 500,
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                padding: "6px 12px",
+                borderRadius: 8,
+                border: "none",
+                backgroundColor: "var(--accent-primary)",
+                fontSize: 12,
+                color: "#ffffff",
+                cursor: "pointer",
+                fontFamily: "inherit",
+                fontWeight: 500,
+                transition: "all 0.15s",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.opacity = "0.9";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.opacity = "1";
               }}
             >
               <PlayCircle size={12} /> Play All
             </button>
           )}
-          <button onClick={onExport} style={{
-            display: "flex", alignItems: "center", gap: 6, padding: "6px 12px", borderRadius: 8,
-            border: `1px solid ${A.border}`, backgroundColor: "#fff", fontSize: 12, color: A.t4,
-            cursor: "pointer", fontFamily: "inherit",
-          }}>
-            <Download size={12} /> Export
-          </button>
-          <button onClick={onBuildSet} style={{
-            display: "flex", alignItems: "center", gap: 6, padding: "6px 12px", borderRadius: 8,
-            border: "none", backgroundColor: A.accent, fontSize: 12, color: "#fff",
-            cursor: "pointer", fontFamily: "inherit", fontWeight: 500,
-          }}>
-            <ListMusic size={12} /> Build Set
-          </button>
+          {onExport && (
+            <button
+              onClick={onExport}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                padding: "6px 12px",
+                borderRadius: 8,
+                border: "1px solid var(--border)",
+                backgroundColor: "transparent",
+                fontSize: 12,
+                color: "var(--text-secondary)",
+                cursor: "pointer",
+                fontFamily: "inherit",
+                transition: "all 0.15s",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = "var(--bg-tertiary)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "transparent";
+              }}
+            >
+              <Download size={12} /> Export
+            </button>
+          )}
+          {onBuildSet && (
+            <button
+              onClick={onBuildSet}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                padding: "6px 12px",
+                borderRadius: 8,
+                border: "none",
+                backgroundColor: "var(--accent-primary)",
+                fontSize: 12,
+                color: "#ffffff",
+                cursor: "pointer",
+                fontFamily: "inherit",
+                fontWeight: 500,
+                transition: "all 0.15s",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.opacity = "0.9";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.opacity = "1";
+              }}
+            >
+              <ListMusic size={12} /> Build Set
+            </button>
+          )}
         </div>
       </div>
 
       {/* Table */}
-      {rows.length === 0 ? (
-        <div style={{
-          borderRadius: 12, border: `1px solid ${A.border}`, backgroundColor: A.panel,
-          padding: "36px 24px", textAlign: "center",
-        }}>
-          <p style={{ fontSize: 13, color: A.t4 }}>This crate has no tracks yet.</p>
-        </div>
-      ) : (
-        <div style={{
-          borderRadius: 12, border: `1px solid ${A.border}`, backgroundColor: A.panel,
-          overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
-        }}>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead>
-              <tr>
-                <th style={{ ...thStyle, width: 36 }}></th>
-                <th style={{ ...thStyle, width: 30 }}></th>
-                <th style={{ ...thStyle, cursor: "pointer" }} onClick={() => toggleSort("artist")}>
-                  Artist <ArrowUpDown size={10} style={{ display: "inline", marginLeft: 2 }} />
-                </th>
-                <th style={{ ...thStyle, cursor: "pointer" }} onClick={() => toggleSort("title")}>
-                  Track <ArrowUpDown size={10} style={{ display: "inline", marginLeft: 2 }} />
-                </th>
-                <th style={{ ...thStyle, cursor: "pointer" }} onClick={() => toggleSort("bpm")}>
-                  BPM <ArrowUpDown size={10} style={{ display: "inline", marginLeft: 2 }} />
-                </th>
-                <th style={{ ...thStyle, cursor: "pointer" }} onClick={() => toggleSort("key")}>
-                  Key <ArrowUpDown size={10} style={{ display: "inline", marginLeft: 2 }} />
-                </th>
-                <th style={thStyle}>Label</th>
-                <th style={thStyle}>Source</th>
-                <th style={{ ...thStyle, width: 32 }}></th>
-              </tr>
-            </thead>
-            <tbody>
-              {sorted.map((row, i) => {
-                // Find original index for removal (pre-sort)
-                const origIndex = rows.findIndex(r => r.id === row.id);
-                return (
-                  <tr
-                    key={row.id}
-                    style={{ transition: "background 0.1s" }}
-                    onMouseEnter={e => e.currentTarget.style.backgroundColor = "#f8fafc"}
-                    onMouseLeave={e => e.currentTarget.style.backgroundColor = "transparent"}
+      <div
+        style={{
+          borderRadius: 12,
+          border: "1px solid var(--border)",
+          backgroundColor: "var(--bg-secondary)",
+          overflow: "hidden",
+          boxShadow: "0 1px 3px rgba(0, 0, 0, 0.12)",
+        }}
+      >
+        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <thead>
+            <tr>
+              {/* # column */}
+              <th style={{ ...thStyle, width: 36 }}></th>
+
+              {/* Play button column */}
+              <th style={{ ...thStyle, width: 32 }}></th>
+
+              {/* Artist */}
+              <th
+                style={{
+                  ...thStyle,
+                  cursor: "pointer",
+                  userSelect: "none",
+                  transition: "background 0.15s",
+                }}
+                onClick={() => toggleSort("artist")}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = "var(--bg-hover)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = "var(--bg-tertiary)";
+                }}
+              >
+                Artist{" "}
+                <ArrowUpDown
+                  size={10}
+                  style={{
+                    display: "inline",
+                    marginLeft: 4,
+                    opacity: sortKey === "artist" ? 1 : 0.5,
+                  }}
+                />
+              </th>
+
+              {/* Title */}
+              <th
+                style={{
+                  ...thStyle,
+                  cursor: "pointer",
+                  userSelect: "none",
+                  transition: "background 0.15s",
+                }}
+                onClick={() => toggleSort("title")}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = "var(--bg-hover)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = "var(--bg-tertiary)";
+                }}
+              >
+                Title{" "}
+                <ArrowUpDown
+                  size={10}
+                  style={{
+                    display: "inline",
+                    marginLeft: 4,
+                    opacity: sortKey === "title" ? 1 : 0.5,
+                  }}
+                />
+              </th>
+
+              {/* Key */}
+              <th
+                style={{
+                  ...thStyle,
+                  width: 60,
+                  cursor: "pointer",
+                  userSelect: "none",
+                  transition: "background 0.15s",
+                }}
+                onClick={() => toggleSort("key")}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = "var(--bg-hover)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = "var(--bg-tertiary)";
+                }}
+              >
+                Key{" "}
+                <ArrowUpDown
+                  size={10}
+                  style={{
+                    display: "inline",
+                    marginLeft: 4,
+                    opacity: sortKey === "key" ? 1 : 0.5,
+                  }}
+                />
+              </th>
+
+              {/* BPM */}
+              <th
+                style={{
+                  ...thStyle,
+                  width: 60,
+                  cursor: "pointer",
+                  userSelect: "none",
+                  transition: "background 0.15s",
+                }}
+                onClick={() => toggleSort("bpm")}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = "var(--bg-hover)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = "var(--bg-tertiary)";
+                }}
+              >
+                BPM{" "}
+                <ArrowUpDown
+                  size={10}
+                  style={{
+                    display: "inline",
+                    marginLeft: 4,
+                    opacity: sortKey === "bpm" ? 1 : 0.5,
+                  }}
+                />
+              </th>
+
+              {/* Energy */}
+              <th
+                style={{
+                  ...thStyle,
+                  width: 80,
+                  cursor: "pointer",
+                  userSelect: "none",
+                  transition: "background 0.15s",
+                }}
+                onClick={() => toggleSort("energy")}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = "var(--bg-hover)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = "var(--bg-tertiary)";
+                }}
+              >
+                Energy{" "}
+                <ArrowUpDown
+                  size={10}
+                  style={{
+                    display: "inline",
+                    marginLeft: 4,
+                    opacity: sortKey === "energy" ? 1 : 0.5,
+                  }}
+                />
+              </th>
+
+              {/* Label */}
+              <th style={{ ...thStyle }}>Label</th>
+
+              {/* Duration */}
+              <th style={{ ...thStyle, width: 60 }}>Duration</th>
+
+              {/* Source tag */}
+              <th style={{ ...thStyle, width: 80 }}>Source</th>
+
+              {/* Actions */}
+              <th style={{ ...thStyle, width: 32 }}></th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {sorted.map((row, i) => {
+              const origIndex = rows.findIndex((r) => r.id === row.id);
+
+              return (
+                <tr
+                  key={row.id}
+                  style={{
+                    transition: "background-color 0.1s",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = "var(--bg-hover)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = "transparent";
+                  }}
+                >
+                  {/* Row number */}
+                  <td
+                    style={{
+                      ...tdStyle,
+                      color: "var(--text-muted)",
+                      fontFamily: "monospace",
+                      fontSize: 11,
+                      textAlign: "right",
+                    }}
                   >
-                    <td style={{ ...tdStyle, color: A.t5, fontFamily: "monospace", fontSize: 11 }}>{i + 1}</td>
-                    <td style={{ ...tdStyle, paddingLeft: 8, paddingRight: 0 }}>
-                      <PlayButton
-                        track={{ id: row.id, artist: row.artist, title: row.title, label: row.label, bpm: row.bpm, key: row.key }}
-                        queueTracks={sorted.map(r => ({ id: r.id, artist: r.artist, title: r.title, label: r.label, bpm: r.bpm, key: r.key }))}
-                        queueIndex={i}
-                      />
-                    </td>
-                    <td style={{ ...tdStyle, fontWeight: 600, color: A.t1 }}>{row.artist}</td>
-                    <td style={tdStyle}>
-                      <span style={{ color: "#475569" }}>{row.title}</span>
-                      {row.year && <span style={{ marginLeft: 8, fontSize: 11, color: A.t5 }}>{row.year}</span>}
-                    </td>
-                    <td style={{ ...tdStyle, fontFamily: "monospace", color: A.t4 }}>{row.bpm || "—"}</td>
-                    <td style={tdStyle}>
-                      {row.key ? (
-                        <span style={{
-                          padding: "2px 6px", borderRadius: 5, fontFamily: "monospace", fontSize: 10,
-                          fontWeight: 700, color: KEY_COLORS[row.key] ?? "#888",
-                          backgroundColor: (KEY_COLORS[row.key] ?? "#888") + "22",
-                        }}>
-                          {row.key}
-                        </span>
-                      ) : <span style={{ color: A.t5 }}>—</span>}
-                    </td>
-                    <td style={{ ...tdStyle, fontSize: 12, color: A.t4 }}>{row.label || "—"}</td>
-                    <td style={tdStyle}>
-                      <span style={{
-                        padding: "2px 7px", borderRadius: 20, backgroundColor: row.source === "rec" ? A.accentBg : "#f1f5f9",
-                        fontSize: 10, color: row.source === "rec" ? A.accent : A.t4,
-                        fontWeight: row.source === "rec" ? 600 : 400,
-                      }}>
-                        {row.source}
+                    {i + 1}
+                  </td>
+
+                  {/* Play button */}
+                  <td style={{ ...tdStyle, paddingLeft: 8, paddingRight: 4 }}>
+                    <PlayButton
+                      track={{
+                        id: row.id,
+                        artist: row.artist,
+                        title: row.title,
+                        label: row.label,
+                        bpm: row.bpm,
+                        key: row.key,
+                        energy: row.energy,
+                      }}
+                      queueTracks={sorted.map((r) => ({
+                        id: r.id,
+                        artist: r.artist,
+                        title: r.title,
+                        label: r.label,
+                        bpm: r.bpm,
+                        key: r.key,
+                        energy: r.energy,
+                      }))}
+                      queueIndex={i}
+                      size="sm"
+                      variant="ghost"
+                    />
+                  </td>
+
+                  {/* Artist */}
+                  <td
+                    style={{
+                      ...tdStyle,
+                      fontWeight: 600,
+                      color: "var(--text-primary)",
+                    }}
+                  >
+                    {row.artist}
+                  </td>
+
+                  {/* Title */}
+                  <td
+                    style={{
+                      ...tdStyle,
+                      color: "var(--text-secondary)",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {row.title}
+                    {row.year && (
+                      <span style={{ marginLeft: 8, fontSize: 11, color: "var(--text-muted)" }}>
+                        {row.year}
                       </span>
-                    </td>
-                    <td style={tdStyle}>
-                      <button
-                        onClick={() => onRemoveTrack?.(origIndex)}
+                    )}
+                  </td>
+
+                  {/* Key badge */}
+                  <td style={tdStyle}>
+                    {row.key ? (
+                      <span
                         style={{
-                          width: 22, height: 22, borderRadius: 5, border: "none", cursor: "pointer",
-                          display: "flex", alignItems: "center", justifyContent: "center",
-                          backgroundColor: "transparent", color: "#cbd5e1",
+                          display: "inline-block",
+                          padding: "2px 6px",
+                          borderRadius: 5,
+                          fontFamily: "monospace",
+                          fontSize: 10,
+                          fontWeight: 700,
+                          color: getCamelotColor(row.key),
+                          backgroundColor: getCamelotColor(row.key) + "22",
                         }}
-                        onMouseEnter={e => { e.currentTarget.style.backgroundColor = "#fee2e2"; e.currentTarget.style.color = "#ef4444"; }}
-                        onMouseLeave={e => { e.currentTarget.style.backgroundColor = "transparent"; e.currentTarget.style.color = "#cbd5e1"; }}
+                      >
+                        {row.key}
+                      </span>
+                    ) : (
+                      <span style={{ color: "var(--text-muted)" }}>—</span>
+                    )}
+                  </td>
+
+                  {/* BPM */}
+                  <td
+                    style={{
+                      ...tdStyle,
+                      fontFamily: "monospace",
+                      color: "var(--text-secondary)",
+                    }}
+                  >
+                    {row.bpm || "—"}
+                  </td>
+
+                  {/* Energy bar */}
+                  <td style={tdStyle}>
+                    {row.energy !== undefined && row.energy > 0 ? (
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <div
+                          style={{
+                            flex: 1,
+                            height: 4,
+                            borderRadius: 20,
+                            backgroundColor: "var(--bg-tertiary)",
+                            overflow: "hidden",
+                          }}
+                        >
+                          <div
+                            style={{
+                              height: "100%",
+                              borderRadius: 20,
+                              background:
+                                "linear-gradient(to right, var(--accent-primary), var(--accent-secondary))",
+                              width: `${Math.min(row.energy, 100)}%`,
+                            }}
+                          />
+                        </div>
+                        <span
+                          style={{
+                            fontSize: 10,
+                            color: "var(--text-muted)",
+                            fontFamily: "monospace",
+                            minWidth: 20,
+                            textAlign: "right",
+                          }}
+                        >
+                          {Math.round(row.energy)}
+                        </span>
+                      </div>
+                    ) : (
+                      <span style={{ color: "var(--text-muted)" }}>—</span>
+                    )}
+                  </td>
+
+                  {/* Label */}
+                  <td
+                    style={{
+                      ...tdStyle,
+                      fontSize: 12,
+                      color: "var(--text-secondary)",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {row.label || "—"}
+                  </td>
+
+                  {/* Duration */}
+                  <td
+                    style={{
+                      ...tdStyle,
+                      fontFamily: "monospace",
+                      color: "var(--text-muted)",
+                      fontSize: 11,
+                    }}
+                  >
+                    {formatDuration(row.duration)}
+                  </td>
+
+                  {/* Source badge */}
+                  <td style={tdStyle}>
+                    <span
+                      style={{
+                        display: "inline-block",
+                        padding: "2px 7px",
+                        borderRadius: 20,
+                        fontSize: 10,
+                        fontWeight: row.source === "recommended" ? 600 : 400,
+                        backgroundColor:
+                          row.source === "recommended"
+                            ? "rgba(0, 212, 170, 0.09)"
+                            : "var(--bg-tertiary)",
+                        color:
+                          row.source === "recommended"
+                            ? "var(--accent-primary)"
+                            : "var(--text-muted)",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {row.source}
+                    </span>
+                  </td>
+
+                  {/* Delete button */}
+                  <td style={tdStyle}>
+                    {onRemoveTrack && (
+                      <button
+                        onClick={() => onRemoveTrack(origIndex)}
+                        style={{
+                          width: 24,
+                          height: 24,
+                          borderRadius: 5,
+                          border: "none",
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          backgroundColor: "transparent",
+                          color: "var(--text-muted)",
+                          transition: "all 0.15s",
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = "rgba(255, 68, 68, 0.1)";
+                          e.currentTarget.style.color = "var(--accent-danger)";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = "transparent";
+                          e.currentTarget.style.color = "var(--text-muted)";
+                        }}
                       >
                         <Trash2 size={12} />
                       </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

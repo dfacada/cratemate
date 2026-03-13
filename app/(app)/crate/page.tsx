@@ -4,11 +4,6 @@ import { Archive, Plus, Trash2, Pencil, Check, X, Music2, Clock, ChevronRight } 
 import { getCrates, saveCrate, deleteCrate, type Crate } from "@/lib/crates";
 import CrateTable from "@/components/crate-table";
 
-const A = {
-  bg: "#F0F4F8", panel: "#ffffff", border: "#e2e8f0",
-  t1: "#0f172a", t2: "#1e293b", t3: "#334155", t4: "#64748b", t5: "#94a3b8",
-  accent: "#00B4D8", accentBg: "rgba(0,180,216,0.09)", accentBorder: "rgba(0,180,216,0.2)",
-};
 
 function timeAgo(ts: number): string {
   const diff = Date.now() - ts;
@@ -68,23 +63,23 @@ export default function CratePage() {
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
         <div>
-          <h1 style={{ fontSize: 22, fontWeight: 700, color: A.t1, letterSpacing: "-0.02em" }}>Crates</h1>
-          <p style={{ fontSize: 13, color: A.t4, marginTop: 4 }}>Your saved tracks and active crate sessions.</p>
+          <h1 style={{ fontSize: 22, fontWeight: 700, color: "var(--text-primary)", letterSpacing: "-0.02em" }}>Crates</h1>
+          <p style={{ fontSize: 13, color: "var(--text-secondary)", marginTop: 4 }}>Your saved tracks and active crate sessions.</p>
         </div>
         <div style={{
-          borderRadius: 12, border: `1px solid ${A.border}`, backgroundColor: A.panel,
+          borderRadius: 12, border: "1px solid var(--border)", backgroundColor: "var(--bg-secondary)",
           padding: "48px 24px", textAlign: "center",
           boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
         }}>
           <div style={{
-            width: 48, height: 48, borderRadius: 12, backgroundColor: A.accentBg,
-            border: `1px solid ${A.accentBorder}`, display: "flex", alignItems: "center",
+            width: 48, height: 48, borderRadius: 12, backgroundColor: "rgba(0,212,170,0.1)",
+            border: "1px solid rgba(0,212,170,0.2)", display: "flex", alignItems: "center",
             justifyContent: "center", margin: "0 auto 16px",
           }}>
-            <Archive size={20} color={A.accent} />
+            <Archive size={20} style={{ color: "var(--accent-primary)" }} />
           </div>
-          <p style={{ fontSize: 15, fontWeight: 600, color: A.t1 }}>No crates yet</p>
-          <p style={{ fontSize: 13, color: A.t4, marginTop: 6, maxWidth: 320, margin: "6px auto 0" }}>
+          <p style={{ fontSize: 15, fontWeight: 600, color: "var(--text-primary)" }}>No crates yet</p>
+          <p style={{ fontSize: 13, color: "var(--text-secondary)", marginTop: 6, maxWidth: 320, margin: "6px auto 0" }}>
             Start a New Dig to analyze a playlist and save your first crate.
           </p>
           <a
@@ -92,7 +87,7 @@ export default function CratePage() {
             style={{
               display: "inline-flex", alignItems: "center", gap: 6,
               marginTop: 20, padding: "8px 16px", borderRadius: 8,
-              backgroundColor: A.accent, color: "#fff", fontSize: 13,
+              backgroundColor: "var(--accent-primary)", color: "#fff", fontSize: 13,
               fontWeight: 500, textDecoration: "none", fontFamily: "inherit",
             }}
           >
@@ -106,21 +101,21 @@ export default function CratePage() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
       <div>
-        <h1 style={{ fontSize: 22, fontWeight: 700, color: A.t1, letterSpacing: "-0.02em" }}>Crates</h1>
-        <p style={{ fontSize: 13, color: A.t4, marginTop: 4 }}>Your saved tracks and active crate sessions.</p>
+        <h1 style={{ fontSize: 22, fontWeight: 700, color: "var(--text-primary)", letterSpacing: "-0.02em" }}>Crates</h1>
+        <p style={{ fontSize: 13, color: "var(--text-secondary)", marginTop: 4 }}>Your saved tracks and active crate sessions.</p>
       </div>
 
       {/* Crate list */}
       <div style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
         <div style={{
-          width: 260, flexShrink: 0, borderRadius: 12, border: `1px solid ${A.border}`,
-          backgroundColor: A.panel, overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+          width: 260, flexShrink: 0, borderRadius: 12, border: "1px solid var(--border)",
+          backgroundColor: "var(--bg-secondary)", overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
         }}>
           <div style={{
-            padding: "12px 14px", borderBottom: `1px solid ${A.border}`,
+            padding: "12px 14px", borderBottom: "1px solid var(--border)",
             display: "flex", alignItems: "center", justifyContent: "space-between",
           }}>
-            <span style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.07em", color: A.t5 }}>
+            <span style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--text-muted)" }}>
               {crates.length} crate{crates.length !== 1 ? "s" : ""}
             </span>
           </div>
@@ -138,31 +133,31 @@ export default function CratePage() {
                   onClick={() => { if (!isEditing && !isDeleting) setSelectedId(crate.id); }}
                   style={{
                     padding: "10px 14px", cursor: "pointer",
-                    backgroundColor: isSelected ? A.accentBg : "transparent",
-                    borderLeft: isSelected ? `3px solid ${A.accent}` : "3px solid transparent",
-                    borderBottom: `1px solid ${A.border}`,
+                    backgroundColor: isSelected ? "rgba(0,212,170,0.1)" : "transparent",
+                    borderLeft: isSelected ? "3px solid var(--accent-primary)" : "3px solid transparent",
+                    borderBottom: "1px solid var(--border)",
                     transition: "background 0.15s",
                   }}
-                  onMouseEnter={e => { if (!isSelected) e.currentTarget.style.backgroundColor = "#f8fafc"; }}
+                  onMouseEnter={e => { if (!isSelected) e.currentTarget.style.backgroundColor = "rgba(0,212,170,0.05)"; }}
                   onMouseLeave={e => { if (!isSelected) e.currentTarget.style.backgroundColor = "transparent"; }}
                 >
                   {isDeleting ? (
                     <div>
-                      <p style={{ fontSize: 12, color: "#ef4444", fontWeight: 600 }}>Delete this crate?</p>
+                      <p style={{ fontSize: 12, color: "var(--accent-danger)", fontWeight: 600 }}>Delete this crate?</p>
                       <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
                         <button
                           onClick={e => { e.stopPropagation(); handleDelete(crate.id); }}
                           style={{
                             padding: "4px 10px", borderRadius: 6, border: "none",
-                            backgroundColor: "#ef4444", color: "#fff", fontSize: 11,
+                            backgroundColor: "var(--accent-danger)", color: "#fff", fontSize: 11,
                             fontWeight: 500, cursor: "pointer", fontFamily: "inherit",
                           }}
                         >Delete</button>
                         <button
                           onClick={e => { e.stopPropagation(); setConfirmDeleteId(null); }}
                           style={{
-                            padding: "4px 10px", borderRadius: 6, border: `1px solid ${A.border}`,
-                            backgroundColor: "#fff", color: A.t4, fontSize: 11,
+                            padding: "4px 10px", borderRadius: 6, border: "1px solid var(--border)",
+                            backgroundColor: "var(--bg-secondary)", color: "var(--text-secondary)", fontSize: 11,
                             cursor: "pointer", fontFamily: "inherit",
                           }}
                         >Cancel</button>
@@ -178,23 +173,24 @@ export default function CratePage() {
                         autoFocus
                         style={{
                           flex: 1, padding: "3px 6px", borderRadius: 4, fontSize: 12,
-                          border: `1px solid ${A.accent}`, outline: "none", fontFamily: "inherit",
+                          border: "1px solid var(--accent-primary)", outline: "none", fontFamily: "inherit",
+                          backgroundColor: "var(--bg-tertiary)", color: "var(--text-primary)",
                         }}
                       />
                       <button onClick={e => { e.stopPropagation(); handleRename(crate); }}
                         style={{ border: "none", background: "none", cursor: "pointer", padding: 2 }}>
-                        <Check size={13} color={A.accent} />
+                        <Check size={13} color="var(--accent-primary)" />
                       </button>
                       <button onClick={e => { e.stopPropagation(); setEditingId(null); }}
                         style={{ border: "none", background: "none", cursor: "pointer", padding: 2 }}>
-                        <X size={13} color={A.t5} />
+                        <X size={13} color="var(--text-muted)" />
                       </button>
                     </div>
                   ) : (
                     <div>
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                         <p style={{
-                          fontSize: 13, fontWeight: 600, color: isSelected ? A.accent : A.t1,
+                          fontSize: 13, fontWeight: 600, color: isSelected ? "var(--accent-primary)" : "var(--text-primary)",
                           whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 160,
                         }}>
                           {crate.name}
@@ -206,7 +202,7 @@ export default function CratePage() {
                             onMouseEnter={e => e.currentTarget.style.opacity = "1"}
                             onMouseLeave={e => e.currentTarget.style.opacity = "0.4"}
                           >
-                            <Pencil size={11} color={A.t4} />
+                            <Pencil size={11} color="var(--text-secondary)" />
                           </button>
                           <button
                             onClick={e => { e.stopPropagation(); setConfirmDeleteId(crate.id); }}
@@ -214,17 +210,17 @@ export default function CratePage() {
                             onMouseEnter={e => e.currentTarget.style.opacity = "1"}
                             onMouseLeave={e => e.currentTarget.style.opacity = "0.4"}
                           >
-                            <Trash2 size={11} color="#ef4444" />
+                            <Trash2 size={11} color="var(--accent-danger)" />
                           </button>
-                          {isSelected && <ChevronRight size={12} color={A.accent} />}
+                          {isSelected && <ChevronRight size={12} style={{ color: "var(--accent-primary)" }} />}
                         </div>
                       </div>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4, fontSize: 11, color: A.t5 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4, fontSize: 11, color: "var(--text-muted)" }}>
                         <span style={{ display: "flex", alignItems: "center", gap: 3 }}>
                           <Music2 size={10} /> {crate.tracks.length}
                         </span>
                         {originals > 0 && <span>{originals} orig</span>}
-                        {added > 0 && <span style={{ color: A.accent }}>{added} added</span>}
+                        {added > 0 && <span style={{ color: "var(--accent-primary)" }}>{added} added</span>}
                         <span style={{ display: "flex", alignItems: "center", gap: 3 }}>
                           <Clock size={10} /> {timeAgo(crate.createdAt)}
                         </span>
@@ -248,10 +244,10 @@ export default function CratePage() {
             />
           ) : (
             <div style={{
-              borderRadius: 12, border: `1px solid ${A.border}`, backgroundColor: A.panel,
+              borderRadius: 12, border: "1px solid var(--border)", backgroundColor: "var(--bg-secondary)",
               padding: "40px 24px", textAlign: "center",
             }}>
-              <p style={{ fontSize: 13, color: A.t4 }}>Select a crate to view its tracks.</p>
+              <p style={{ fontSize: 13, color: "var(--text-secondary)" }}>Select a crate to view its tracks.</p>
             </div>
           )}
         </div>

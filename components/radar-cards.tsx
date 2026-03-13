@@ -65,7 +65,7 @@ export default function RadarCards() {
                     <p style={{ fontSize:12, color:A.t4, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{t.title}</p>
                   </div>
                   <div style={{ display:"flex", gap:4, flexShrink:0 }}>
-                    <PlayButton track={{ id:t.id, artist:t.artist, title:t.title, bpm:t.bpm, key:t.key, energy:t.energy }} size={28} />
+                    <PlayButton track={{ id:t.id, artist:t.artist, title:t.title, bpm:t.bpm, key:t.key, energy:t.energy }} size="md" />
                     <button onClick={()=>setAddedIds(p=>new Set([...p,t.id]))} disabled={addedIds.has(t.id)}
                       style={{ width:28, height:28, borderRadius:7, border:"none", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", backgroundColor:addedIds.has(t.id)?"rgba(0,180,216,0.1)":"#f1f5f9", color:addedIds.has(t.id)?A.accent:"#64748b" }}>
                       <Plus size={13} />

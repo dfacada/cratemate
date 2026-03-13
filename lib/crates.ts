@@ -8,6 +8,8 @@ export interface CrateTrack {
   key?:   string;
   year?:  number;
   genre?: string;
+  energy?: number;
+  duration?: number; // in seconds
   source: "original" | "added"; // original = from input playlist, added = user-selected rec
 }
 

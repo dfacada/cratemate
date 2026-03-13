@@ -1,247 +1,313 @@
 "use client";
-import { useState } from "react";
-import { X, ExternalLink, AlertCircle, Loader2, ChevronDown, ChevronUp, RefreshCw, SkipBack, SkipForward, HardDrive } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { X, AlertCircle, Loader2, SkipBack, SkipForward, Play, Pause, Volume2, VolumeX, Music, ChevronUp, ChevronDown } from "lucide-react";
 import { usePlayer } from "@/context/player-context";
-import BeatportEnrichment from "@/components/beatport-enrichment";
+import { getCamelotColor } from "@/lib/theme";
 
-const A = {
-  border: "#e2e8f0", t1: "#0f172a", t4: "#64748b", t5: "#94a3b8",
-  accent: "#00B4D8", accentBg: "rgba(0,180,216,0.09)",
-};
-const SC_ORANGE = "#FF5500";
-
-function CacheProgressBadge({ cached, total, isCaching }: { cached: number; total: number; isCaching: boolean }) {
-  if (total <= 1) return null;
-
-  const pct = Math.round((cached / total) * 100);
-  const done = cached >= total;
-
-  return (
-    <div
-      style={{
-        display: "flex", alignItems: "center", gap: 5,
-        padding: "3px 8px", borderRadius: 12, flexShrink: 0,
-        backgroundColor: done ? "#f0fdf4" : "#fefce8",
-        border: `1px solid ${done ? "#bbf7d0" : "#fef08a"}`,
-        transition: "all 0.3s ease",
-      }}
-      title={done ? "All tracks cached — skip freely!" : `Caching tracks: ${cached}/${total}`}
-    >
-      {isCaching ? (
-        <Loader2 size={10} color="#ca8a04" style={{ animation: "spin 1.5s linear infinite" }} />
-      ) : (
-        <HardDrive size={10} color="#16a34a" />
-      )}
-      <span style={{
-        fontSize: 10, fontWeight: 600, fontFamily: "monospace",
-        color: done ? "#16a34a" : "#ca8a04",
-      }}>
-        {cached}/{total}
-      </span>
-      {/* Mini progress bar */}
-      <div style={{
-        width: 32, height: 4, borderRadius: 2,
-        backgroundColor: done ? "#dcfce7" : "#fef9c3",
-        overflow: "hidden",
-      }}>
-        <div style={{
-          width: `${pct}%`, height: "100%", borderRadius: 2,
-          backgroundColor: done ? "#22c55e" : "#eab308",
-          transition: "width 0.5s ease",
-        }} />
-      </div>
-    </div>
-  );
+function formatTime(seconds: number): string {
+  if (!Number.isFinite(seconds) || seconds === 0) return "0:00";
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return `${m}:${s < 10 ? "0" : ""}${s}`;
 }
 
 export default function PlayerBar() {
   const {
-    currentTrack, scResult, status, errorMsg, stop, play,
-    queue, queueIndex, next, prev, hasNext, hasPrev,
-    cachedCount, cacheTotal, isCaching,
+    currentTrack,
+    status,
+    errorMsg,
+    playbackSource,
+    isPlaying,
+    position,
+    duration,
+    volume,
+    pause,
+    resume,
+    togglePlay,
+    next,
+    prev,
+    hasNext,
+    hasPrev,
+    seek,
+    setVolume: setVolumeControl,
   } = usePlayer();
+
   const [expanded, setExpanded] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
+  const [volumeBeforeMute, setVolumeBeforeMute] = useState(volume);
 
   if (!currentTrack || status === "idle") return null;
 
-  const loading = status === "loading";
+  const isLoading = status === "loading";
   const isError = status === "error";
-  const isReady = status === "ready" && !!scResult?.embed_url;
-  const inQueue = queue.length > 1;
+  const isReady = status === "ready";
+  const progressPercent = duration > 0 ? (position / duration) * 100 : 0;
+  const currentTimeMs = position;
+  const durationMs = duration;
 
-  // Transport controls (next/prev) — shown in all states when there's a queue
-  const transportControls = inQueue ? (
-    <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
-      <button
-        onClick={prev}
-        disabled={!hasPrev}
-        style={{
-          ...navBtn,
-          opacity: hasPrev ? 1 : 0.3,
-          cursor: hasPrev ? "pointer" : "default",
-        }}
-        title="Previous track"
-      >
-        <SkipBack size={13} fill="currentColor" />
-      </button>
-      <span style={{
-        fontSize: 10, color: A.t5, fontFamily: "monospace",
-        minWidth: 38, textAlign: "center",
-      }}>
-        {queueIndex + 1}/{queue.length}
-      </span>
-      <button
-        onClick={next}
-        disabled={!hasNext}
-        style={{
-          ...navBtn,
-          opacity: hasNext ? 1 : 0.3,
-          cursor: hasNext ? "pointer" : "default",
-        }}
-        title="Next track"
-      >
-        <SkipForward size={13} fill="currentColor" />
-      </button>
-    </div>
-  ) : null;
+  const handleVolumeChange = (newVolume: number) => {
+    const bounded = Math.max(0, Math.min(1, newVolume));
+    setVolumeControl(bounded);
+    if (bounded > 0 && isMuted) {
+      setIsMuted(false);
+    }
+  };
 
-  const cacheBadge = inQueue ? (
-    <CacheProgressBadge cached={cachedCount} total={cacheTotal} isCaching={isCaching} />
-  ) : null;
+  const handleMuteToggle = () => {
+    if (isMuted) {
+      handleVolumeChange(volumeBeforeMute);
+      setIsMuted(false);
+    } else {
+      setVolumeBeforeMute(volume);
+      handleVolumeChange(0);
+      setIsMuted(true);
+    }
+  };
+
+  const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const percent = (e.clientX - rect.left) / rect.width;
+    const newPosition = percent * duration;
+    seek(newPosition);
+  };
 
   return (
-    <>
-      <div className="player-bar">
-
-        {/* ── Loading ── */}
-        {loading && (
-          <div style={{ display: "flex", alignItems: "center", gap: 12, height: 64, padding: "0 16px" }}>
-            {transportControls}
-            <div style={{ width: 38, height: 38, borderRadius: 8, backgroundColor: "#FF550012", border: "1px solid #FF550030", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-              <Loader2 size={16} color={SC_ORANGE} style={{ animation: "spin 0.7s linear infinite" }} />
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ fontSize: 13, fontWeight: 600, color: A.t1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {currentTrack.artist} — {currentTrack.title}
-              </p>
-              <p style={{ fontSize: 11, color: A.t4 }}>Finding on SoundCloud…</p>
-            </div>
-            {cacheBadge}
-            <button onClick={stop} style={closeBtn}><X size={12} /></button>
-          </div>
-        )}
-
-        {/* ── Error ── */}
-        {isError && (
-          <div style={{ display: "flex", alignItems: "center", gap: 12, height: 64, padding: "0 16px" }}>
-            {transportControls}
-            <div style={{ width: 38, height: 38, borderRadius: 8, backgroundColor: "#fef2f2", border: "1px solid #fecaca", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-              <AlertCircle size={16} color="#ef4444" />
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ fontSize: 13, fontWeight: 600, color: A.t1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {currentTrack.artist} — {currentTrack.title}
-              </p>
-              <p style={{ fontSize: 11, color: "#dc2626" }}>{errorMsg}</p>
-            </div>
-            <div className="player-chips">
-              <BeatportEnrichment track={currentTrack} />
-            </div>
-            {cacheBadge}
-            <button onClick={() => play(currentTrack, true)} style={actionBtn} title="Retry">
-              <RefreshCw size={11} style={{ marginRight: 4 }} /> Retry
-            </button>
-            {hasNext && (
-              <button onClick={next} style={actionBtn} title="Skip to next">
-                <SkipForward size={11} style={{ marginRight: 4 }} /> Skip
-              </button>
-            )}
-            <button onClick={stop} style={closeBtn}><X size={12} /></button>
-          </div>
-        )}
-
-        {/* ── Ready ── */}
-        {isReady && scResult && (
-          <>
-            {/* Header row */}
-            <div style={{ display: "flex", alignItems: "center", height: 46, padding: "0 14px", gap: 10, borderBottom: `1px solid ${A.border}` }}>
-
-              {/* Transport controls */}
-              {transportControls}
-
-              {/* SC badge */}
-              <div style={{ display: "flex", alignItems: "center", gap: 5, padding: "3px 8px", borderRadius: 12, backgroundColor: "#FF550012", border: "1px solid #FF550030", flexShrink: 0 }}>
-                <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: SC_ORANGE }} />
-                <span style={{ fontSize: 10, fontWeight: 700, color: SC_ORANGE, letterSpacing: "0.05em" }}>SOUNDCLOUD</span>
-                {scResult.confidence != null && (
-                  <span style={{ fontSize: 9, color: "#FF550080" }}>{Math.round(scResult.confidence * 100)}%</span>
-                )}
-              </div>
-
-              {/* Track name */}
-              <div style={{ flex: "0 1 280px", minWidth: 0 }}>
-                <p style={{ fontSize: 13, fontWeight: 600, color: A.t1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {currentTrack.artist} — {currentTrack.title}
-                </p>
-              </div>
-
-              {/* Beatport chips */}
-              <div className="player-chips" style={{ flex: 1, display: "flex", alignItems: "center", overflow: "hidden" }}>
-                <BeatportEnrichment track={currentTrack} />
-              </div>
-
-              {/* Cache progress badge */}
-              {cacheBadge}
-
-              <button onClick={() => setExpanded(!expanded)} style={iconBtn} title={expanded ? "Compact" : "Full player"}>
-                {expanded ? <ChevronDown size={12} /> : <ChevronUp size={12} />}
-              </button>
-              {scResult.soundcloud_url && (
-                <a href={scResult.soundcloud_url} target="_blank" rel="noopener noreferrer" style={{ ...iconBtn, textDecoration: "none" } as any} title="Open on SoundCloud">
-                  <ExternalLink size={12} />
-                </a>
-              )}
-              <button onClick={stop} style={closeBtn}
-                onMouseEnter={e => { e.currentTarget.style.backgroundColor = "#fef2f2"; e.currentTarget.style.color = "#ef4444"; }}
-                onMouseLeave={e => { e.currentTarget.style.backgroundColor = "transparent"; e.currentTarget.style.color = A.t5; }}>
-                <X size={12} />
-              </button>
-            </div>
-
-            {/* SC widget iframe */}
-            <iframe
-              key={scResult.embed_url!}
-              src={scResult.embed_url!}
-              width="100%"
-              height={expanded ? 166 : 80}
-              scrolling="no"
-              frameBorder="0"
-              allow="autoplay"
-              style={{ display: "block", border: "none" }}
+    <motion.div
+      layout
+      className="fixed bottom-0 left-0 right-0 z-40 border-t transition-colors duration-300"
+      style={{
+        backgroundColor: "rgba(10,10,15,0.85)",
+        backdropFilter: "blur(12px)",
+        borderColor: "var(--border-subtle, #1e1e30)",
+        height: expanded ? 160 : 80,
+      }}
+    >
+      {/* Compact Mode (80px) */}
+      <div className="h-20 px-4 flex items-center gap-3 overflow-hidden">
+        {/* Album Art */}
+        <div className="flex-shrink-0 w-12 h-12 rounded-lg overflow-hidden bg-gradient-to-br from-transparent to-black/20 backdrop-blur-sm border border-white/10">
+          {currentTrack.albumCover ? (
+            <img
+              src={currentTrack.albumCover}
+              alt={`${currentTrack.artist} - ${currentTrack.title}`}
+              className="w-full h-full object-cover"
             />
-          </>
+          ) : (
+            <div className="w-full h-full flex items-center justify-center" style={{ color: "var(--text-secondary)" }}>
+              <Music size={20} />
+            </div>
+          )}
+        </div>
+
+        {/* Track Info */}
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold truncate" style={{ color: "var(--text-primary)" }}>
+            {currentTrack.artist}
+          </p>
+          <p className="text-xs truncate" style={{ color: "var(--text-secondary)" }}>
+            {currentTrack.title}
+          </p>
+        </div>
+
+        {/* Status Indicator */}
+        <AnimatePresence mode="wait">
+          {isLoading && (
+            <motion.div
+              key="loading"
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+              style={{ backgroundColor: "rgba(0,212,170,0.15)", border: "1px solid rgba(0,212,170,0.3)" }}
+            >
+              <Loader2 size={14} style={{ color: "var(--accent-primary)", animation: "spin 1s linear infinite" }} />
+            </motion.div>
+          )}
+          {isError && (
+            <motion.div
+              key="error"
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+              style={{ backgroundColor: "rgba(255,68,68,0.15)", border: "1px solid rgba(255,68,68,0.3)" }}
+            >
+              <AlertCircle size={14} style={{ color: "var(--accent-danger)" }} />
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Key Badge */}
+        {currentTrack.key && (
+          <div
+            className="flex items-center justify-center w-8 h-8 rounded-lg flex-shrink-0 text-xs font-bold"
+            style={{
+              backgroundColor: `${getCamelotColor(currentTrack.key)}22`,
+              border: `1px solid ${getCamelotColor(currentTrack.key)}44`,
+              color: getCamelotColor(currentTrack.key),
+            }}
+            title={`Key: ${currentTrack.key}`}
+          >
+            {currentTrack.key.replace(/([0-9]+)/, "$1")}
+          </div>
         )}
+
+        {/* Controls */}
+        <div className="flex items-center gap-1.5 flex-shrink-0">
+          <button
+            onClick={prev}
+            disabled={!hasPrev}
+            className="p-1.5 rounded-lg transition-all hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed"
+            style={{ color: "var(--text-secondary)" }}
+            title="Previous"
+          >
+            <SkipBack size={16} fill="currentColor" />
+          </button>
+
+          <button
+            onClick={togglePlay}
+            className="p-1.5 rounded-lg transition-all"
+            style={{
+              backgroundColor: "rgba(0,212,170,0.2)",
+              border: "1px solid rgba(0,212,170,0.4)",
+              color: "var(--accent-primary)",
+            }}
+            title={isPlaying ? "Pause" : "Play"}
+          >
+            {isPlaying ? (
+              <Pause size={16} fill="currentColor" />
+            ) : (
+              <Play size={16} fill="currentColor" />
+            )}
+          </button>
+
+          <button
+            onClick={next}
+            disabled={!hasNext}
+            className="p-1.5 rounded-lg transition-all hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed"
+            style={{ color: "var(--text-secondary)" }}
+            title="Next"
+          >
+            <SkipForward size={16} fill="currentColor" />
+          </button>
+        </div>
+
+        {/* Volume */}
+        <div className="flex items-center gap-1 flex-shrink-0">
+          <button
+            onClick={handleMuteToggle}
+            className="p-1.5 rounded-lg transition-all hover:bg-white/5"
+            style={{ color: "var(--text-secondary)" }}
+            title={isMuted ? "Unmute" : "Mute"}
+          >
+            {isMuted || volume === 0 ? (
+              <VolumeX size={14} />
+            ) : (
+              <Volume2 size={14} />
+            )}
+          </button>
+          <input
+            type="range"
+            min="0"
+            max="1"
+            step="0.05"
+            value={isMuted ? 0 : volume}
+            onChange={(e) => handleVolumeChange(parseFloat(e.target.value))}
+            className="w-16"
+            style={{
+              accentColor: "var(--accent-primary)",
+              cursor: "pointer",
+            }}
+            title="Volume"
+          />
+        </div>
+
+        {/* Expand Toggle */}
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="p-1.5 rounded-lg transition-all hover:bg-white/5"
+          style={{ color: "var(--text-secondary)" }}
+          title={expanded ? "Compact" : "Expand"}
+        >
+          {expanded ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
+        </button>
       </div>
 
-    </>
+      {/* Expanded Mode (160px total) */}
+      <AnimatePresence>
+        {expanded && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.3 }}
+            className="border-t px-4 py-3"
+            style={{ borderColor: "var(--border-subtle)" }}
+          >
+            {/* Progress Bar */}
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-xs font-mono flex-shrink-0" style={{ color: "var(--text-secondary)" }}>
+                {formatTime(currentTimeMs / 1000)}
+              </span>
+              <div
+                onClick={handleProgressClick}
+                className="flex-1 h-1.5 rounded-full cursor-pointer overflow-hidden"
+                style={{
+                  backgroundColor: "rgba(0,212,170,0.1)",
+                  border: "1px solid rgba(0,212,170,0.2)",
+                }}
+              >
+                <div
+                  className="h-full rounded-full transition-all duration-75"
+                  style={{
+                    width: `${progressPercent}%`,
+                    backgroundColor: "var(--accent-primary)",
+                  }}
+                />
+              </div>
+              <span className="text-xs font-mono flex-shrink-0" style={{ color: "var(--text-secondary)" }}>
+                {formatTime(durationMs / 1000)}
+              </span>
+            </div>
+
+            {/* Metadata */}
+            <div className="flex items-center justify-between text-xs" style={{ color: "var(--text-secondary)" }}>
+              <div className="flex items-center gap-2">
+                {currentTrack.bpm && (
+                  <span className="font-mono">{currentTrack.bpm} BPM</span>
+                )}
+                {currentTrack.label && (
+                  <>
+                    <span>•</span>
+                    <span className="truncate">{currentTrack.label}</span>
+                  </>
+                )}
+              </div>
+              {currentTrack.energy !== undefined && (
+                <div className="flex items-center gap-1">
+                  <div
+                    className="w-8 h-1.5 rounded-full"
+                    style={{
+                      backgroundColor: `rgba(0,212,170,0.2)`,
+                      overflow: "hidden",
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: `${(currentTrack.energy / 100) * 100}%`,
+                        height: "100%",
+                        backgroundColor: "var(--accent-primary)",
+                      }}
+                    />
+                  </div>
+                  <span>{Math.round(currentTrack.energy)}%</span>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
   );
 }
-
-const closeBtn: React.CSSProperties = {
-  width: 28, height: 28, border: "1px solid #e2e8f0", borderRadius: 7,
-  cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
-  color: "#94a3b8", backgroundColor: "transparent", flexShrink: 0,
-};
-const iconBtn: React.CSSProperties = { ...closeBtn };
-const actionBtn: React.CSSProperties = {
-  display: "flex", alignItems: "center",
-  padding: "4px 9px", fontSize: 11, fontWeight: 600,
-  border: "1px solid #e2e8f0", borderRadius: 6, cursor: "pointer",
-  backgroundColor: "transparent", color: "#94a3b8", flexShrink: 0,
-};
-const navBtn: React.CSSProperties = {
-  width: 30, height: 30, border: "none", borderRadius: 7,
-  display: "flex", alignItems: "center", justifyContent: "center",
-  backgroundColor: "transparent", color: "#64748b", flexShrink: 0,
-  transition: "all 0.15s",
-};

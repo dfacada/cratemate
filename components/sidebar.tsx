@@ -2,200 +2,345 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Sparkles, FolderOpen, List, Users, Tag, Radio, History, Settings, Menu, X } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Home, Sparkles, Database, Users, Radio, Settings, Menu, X, Disc3 } from "lucide-react";
 
-const A = {
-  bg: "#fff", border: "#f1f5f9",
-  t1: "#0f172a", t4: "#64748b", t5: "#94a3b8",
-  accent: "#00B4D8", accentBg: "rgba(0,180,216,0.08)",
-};
-
-const NAV_TOP = [
-  { href: "/new-dig", icon: Sparkles, label: "New Dig", primary: true },
+const NAV_PRIMARY = [
+  { href: "/new-dig", icon: Sparkles, label: "New Dig" },
 ];
 
 const NAV_MAIN = [
-  { href: "/dashboard",   icon: Home,       label: "Home" },
-  { href: "/crate",       icon: FolderOpen, label: "Crates" },
-  { href: "/set-builder", icon: List,       label: "Sets" },
-  { href: "/artists",     icon: Users,      label: "Artists" },
-  { href: "/labels",      icon: Tag,        label: "Labels" },
-  { href: "/radar",       icon: Radio,      label: "Underground Radar" },
+  { href: "/dashboard", icon: Home, label: "Dashboard" },
+  { href: "/crate", icon: Database, label: "Crates" },
+  { href: "/artists", icon: Users, label: "Artists" },
+  { href: "/radar", icon: Radio, label: "Radar" },
 ];
 
 const NAV_BOTTOM = [
-  { href: "/history",  icon: History,  label: "History" },
   { href: "/settings", icon: Settings, label: "Settings" },
 ];
 
-const ALL_NAV = [...NAV_TOP, ...NAV_MAIN, ...NAV_BOTTOM];
-
 const MOBILE_NAV = [
-  { href: "/dashboard", icon: Home,       label: "Home" },
-  { href: "/new-dig",   icon: Sparkles,   label: "Dig" },
-  { href: "/crate",     icon: FolderOpen, label: "Crates" },
-  { href: "/radar",     icon: Radio,      label: "Radar" },
-  { href: "/artists",   icon: Users,      label: "Artists" },
+  { href: "/dashboard", icon: Home, label: "Home" },
+  { href: "/new-dig", icon: Sparkles, label: "Dig" },
+  { href: "/crate", icon: Database, label: "Crates" },
+  { href: "/radar", icon: Radio, label: "Radar" },
+  { href: "/settings", icon: Settings, label: "Settings" },
 ];
 
-function NavItem({ href, icon: Icon, label, active, primary }: {
-  href: string; icon: any; label: string; active: boolean; primary?: boolean;
-}) {
+interface NavItemProps {
+  href: string;
+  icon: React.ComponentType<{ size: number }>;
+  label: string;
+  active: boolean;
+  primary?: boolean;
+}
+
+function NavItem({ href, icon: Icon, label, active, primary }: NavItemProps) {
   return (
-    <Link href={href} style={{ textDecoration: "none" }}>
-      <div style={{
-        display: "flex", alignItems: "center", gap: 10,
-        padding: primary ? "9px 12px" : "7px 12px",
-        borderRadius: 9, margin: primary ? "0 0 4px" : "1px 0",
-        backgroundColor: primary
-          ? active ? A.accent : "rgba(0,180,216,0.1)"
-          : active ? A.accentBg : "transparent",
-        color: primary ? (active ? "#fff" : A.accent) : active ? A.accent : A.t4,
-        border: primary ? `1px solid ${active ? A.accent : "rgba(0,180,216,0.25)"}` : "none",
-        transition: "all 0.12s", cursor: "pointer",
-        fontWeight: primary ? 700 : active ? 600 : 400,
-      }}
-        onMouseEnter={e => {
-          if (primary && !active) {
-            e.currentTarget.style.backgroundColor = A.accent;
-            e.currentTarget.style.color = "#fff";
-          } else if (!primary && !active) {
-            e.currentTarget.style.backgroundColor = "#f8fafc";
-            e.currentTarget.style.color = A.t1;
-          }
-        }}
-        onMouseLeave={e => {
-          if (primary && !active) {
-            e.currentTarget.style.backgroundColor = "rgba(0,180,216,0.1)";
-            e.currentTarget.style.color = A.accent;
-          } else if (!primary && !active) {
-            e.currentTarget.style.backgroundColor = "transparent";
-            e.currentTarget.style.color = A.t4;
-          }
+    <Link href={href} className="block group">
+      <motion.div
+        whileHover={{ x: 4 }}
+        whileTap={{ scale: 0.98 }}
+        className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 ${
+          primary ? "mb-1" : "my-0.5"
+        }`}
+        style={{
+          backgroundColor: active
+            ? primary
+              ? "var(--accent-primary)"
+              : "rgba(0,212,170,0.1)"
+            : primary
+            ? "rgba(0,212,170,0.05)"
+            : "transparent",
+          border: active
+            ? `1px solid ${primary ? "var(--accent-primary)" : "rgba(0,212,170,0.2)"}`
+            : `1px solid ${primary ? "rgba(0,212,170,0.15)" : "transparent"}`,
+          color: active
+            ? primary
+              ? "#fff"
+              : "var(--accent-primary)"
+            : primary
+            ? "var(--accent-primary)"
+            : "var(--text-secondary)",
         }}
       >
-        <Icon size={primary ? 15 : 14} style={{ flexShrink: 0 }} />
-        <span style={{ fontSize: 13 }}>{label}</span>
-        {!primary && active && (
-          <div style={{ marginLeft: "auto", width: 4, height: 4, borderRadius: "50%", backgroundColor: A.accent }} />
+        <div style={{ flexShrink: 0 }}>
+          <Icon size={18} />
+        </div>
+        <span className={`text-sm font-${primary ? "bold" : active ? "semibold" : "medium"}`}>
+          {label}
+        </span>
+        {active && !primary && (
+          <motion.div
+            layoutId="sidebar-active-indicator"
+            className="ml-auto w-1.5 h-1.5 rounded-full"
+            style={{ backgroundColor: "var(--accent-primary)" }}
+          />
         )}
-      </div>
+      </motion.div>
     </Link>
   );
 }
 
-function Divider() {
-  return <div style={{ height: 1, backgroundColor: A.border, margin: "8px 4px" }} />;
-}
-
 export default function Sidebar() {
-  const pathname    = usePathname();
-  const [open, setOpen] = useState(false);
+  const pathname = usePathname();
+  const [mobileOpen, setMobileOpen] = useState(false);
 
-  const isActive = (href: string) =>
-    pathname === href || (href !== "/dashboard" && pathname.startsWith(href));
-
-  const renderNav = () => (
-    <>
-      {/* New Dig — primary CTA */}
-      <div style={{ padding: "8px 8px 0" }}>
-        {NAV_TOP.map(n => (
-          <NavItem key={n.href} {...n} active={isActive(n.href)} />
-        ))}
-      </div>
-
-      <Divider />
-
-      {/* Main nav */}
-      <nav style={{ padding: "0 8px", flex: 1 }}>
-        {NAV_MAIN.map(n => (
-          <NavItem key={n.href} {...n} active={isActive(n.href)} />
-        ))}
-      </nav>
-
-      <Divider />
-
-      {/* Bottom nav */}
-      <div style={{ padding: "0 8px 10px" }}>
-        {NAV_BOTTOM.map(n => (
-          <NavItem key={n.href} {...n} active={isActive(n.href)} />
-        ))}
-      </div>
-    </>
-  );
+  const isActive = (href: string) => {
+    if (href === "/dashboard") return pathname === href;
+    return pathname === href || pathname.startsWith(href);
+  };
 
   return (
     <>
-      {/* ── Desktop sidebar ── */}
-      <div style={{
-        position: "fixed", top: 0, left: 0, bottom: 0, width: 224,
-        backgroundColor: A.bg, borderRight: `1px solid ${A.border}`,
-        display: "flex", flexDirection: "column", zIndex: 40,
-      }} className="desktop-sidebar">
-        {/* Logo */}
-        <div style={{ padding: "18px 16px 14px", borderBottom: `1px solid ${A.border}`, display: "flex", alignItems: "center", gap: 8 }}>
-          <div style={{ width: 28, height: 28, borderRadius: 8, backgroundColor: "rgba(0,180,216,0.12)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <span style={{ fontSize: 14 }}>⊙</span>
+      {/* ── Desktop Sidebar (240px) ── */}
+      <motion.div
+        className="desktop-sidebar fixed top-0 left-0 bottom-0 w-60 flex flex-col z-40"
+        style={{
+          backgroundColor: "rgba(12,12,18,0.9)",
+          backdropFilter: "blur(8px)",
+          borderRight: "1px solid var(--border-subtle)",
+        }}
+      >
+        {/* Logo Header */}
+        <div
+          className="px-4 py-4 border-b flex items-center gap-3"
+          style={{ borderColor: "var(--border-subtle)" }}
+        >
+          <div
+            className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+            style={{
+              background: "linear-gradient(135deg, var(--accent-primary), rgba(0,212,170,0.3))",
+              boxShadow: "0 0 12px rgba(0,212,170,0.2)",
+            }}
+          >
+            <Disc3 size={18} style={{ color: "#fff" }} />
           </div>
-          <span style={{ fontSize: 15, fontWeight: 700, color: A.t1, letterSpacing: "-0.02em" }}>CrateMate</span>
+          <span
+            className="text-base font-bold tracking-tight"
+            style={{ color: "var(--text-primary)", letterSpacing: "-0.02em" }}
+          >
+            CrateMate
+          </span>
         </div>
 
-        {renderNav()}
-      </div>
-
-      {/* ── Mobile top bar ── */}
-      <div style={{
-        position: "fixed", top: 0, left: 0, right: 0, height: 52,
-        backgroundColor: "#fff", borderBottom: `1px solid ${A.border}`,
-        display: "flex", alignItems: "center", justifyContent: "space-between",
-        padding: "0 16px", zIndex: 50,
-      }} className="mobile-topbar">
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <div style={{ width: 26, height: 26, borderRadius: 7, backgroundColor: "rgba(0,180,216,0.12)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <span style={{ fontSize: 13 }}>⊙</span>
+        {/* Navigation Sections */}
+        <nav className="flex-1 overflow-y-auto px-2 py-4 flex flex-col gap-1">
+          {/* Primary CTA */}
+          <div className="mb-2">
+            {NAV_PRIMARY.map((item) => (
+              <NavItem
+                key={item.href}
+                {...item}
+                active={isActive(item.href)}
+                primary={true}
+              />
+            ))}
           </div>
-          <span style={{ fontSize: 15, fontWeight: 700, color: A.t1, letterSpacing: "-0.02em" }}>CrateMate</span>
+
+          {/* Main Navigation */}
+          <div className="space-y-1">
+            {NAV_MAIN.map((item) => (
+              <NavItem
+                key={item.href}
+                {...item}
+                active={isActive(item.href)}
+              />
+            ))}
+          </div>
+
+          {/* Spacer */}
+          <div className="flex-1" />
+
+          {/* Bottom Navigation */}
+          <div className="space-y-1 pt-2 border-t" style={{ borderColor: "var(--border-subtle)" }}>
+            {NAV_BOTTOM.map((item) => (
+              <NavItem
+                key={item.href}
+                {...item}
+                active={isActive(item.href)}
+              />
+            ))}
+          </div>
+        </nav>
+      </motion.div>
+
+      {/* ── Mobile Top Bar ── */}
+      <motion.div
+        className="mobile-topbar fixed top-0 left-0 right-0 h-14 flex items-center justify-between px-4 z-50 border-b"
+        style={{
+          backgroundColor: "rgba(12,12,18,0.9)",
+          backdropFilter: "blur(8px)",
+          borderColor: "var(--border-subtle)",
+        }}
+      >
+        <div className="flex items-center gap-2">
+          <div
+            className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+            style={{
+              background: "linear-gradient(135deg, var(--accent-primary), rgba(0,212,170,0.3))",
+            }}
+          >
+            <Disc3 size={16} style={{ color: "#fff" }} />
+          </div>
+          <span
+            className="text-sm font-bold tracking-tight"
+            style={{ color: "var(--text-primary)" }}
+          >
+            CrateMate
+          </span>
         </div>
-        <button onClick={() => setOpen(true)} style={{ border: "none", backgroundColor: "transparent", cursor: "pointer", padding: 6, color: A.t4 }}>
+        <button
+          onClick={() => setMobileOpen(true)}
+          className="p-2 rounded-lg transition-colors hover:bg-white/5"
+          style={{ color: "var(--text-secondary)" }}
+        >
           <Menu size={20} />
         </button>
-      </div>
+      </motion.div>
 
-      {/* ── Mobile drawer ── */}
-      {open && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 100 }}>
-          <div onClick={() => setOpen(false)} style={{ position: "absolute", inset: 0, backgroundColor: "rgba(0,0,0,0.35)" }} />
-          <div style={{ position: "absolute", top: 0, left: 0, bottom: 0, width: 260, backgroundColor: "#fff", boxShadow: "4px 0 24px rgba(0,0,0,0.12)", display: "flex", flexDirection: "column" }}>
-            <div style={{ padding: "16px", borderBottom: `1px solid ${A.border}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <span style={{ fontSize: 15, fontWeight: 700, color: A.t1 }}>CrateMate</span>
-              <button onClick={() => setOpen(false)} style={{ border: "none", backgroundColor: "transparent", cursor: "pointer", color: A.t4 }}>
-                <X size={18} />
-              </button>
-            </div>
-            <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }} onClick={() => setOpen(false)}>
-              {renderNav()}
-            </div>
-          </div>
-        </div>
-      )}
+      {/* ── Mobile Drawer ── */}
+      <AnimatePresence>
+        {mobileOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setMobileOpen(false)}
+              className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40"
+            />
+            <motion.div
+              initial={{ x: "-100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "-100%" }}
+              transition={{ type: "spring", damping: 20, stiffness: 300 }}
+              className="fixed left-0 top-0 bottom-0 w-64 flex flex-col z-50 border-r"
+              style={{
+                backgroundColor: "rgba(12,12,18,0.95)",
+                backdropFilter: "blur(12px)",
+                borderColor: "var(--border-subtle)",
+              }}
+            >
+              {/* Header */}
+              <div
+                className="px-4 py-4 border-b flex items-center justify-between"
+                style={{ borderColor: "var(--border-subtle)" }}
+              >
+                <span
+                  className="text-base font-bold"
+                  style={{ color: "var(--text-primary)" }}
+                >
+                  Menu
+                </span>
+                <button
+                  onClick={() => setMobileOpen(false)}
+                  className="p-2 rounded-lg transition-colors hover:bg-white/5"
+                  style={{ color: "var(--text-secondary)" }}
+                >
+                  <X size={18} />
+                </button>
+              </div>
 
-      {/* ── Mobile bottom nav ── */}
-      <div style={{
-        position: "fixed", bottom: 0, left: 0, right: 0,
-        backgroundColor: "#fff", borderTop: `1px solid ${A.border}`,
-        display: "flex", alignItems: "stretch", zIndex: 40, height: 56,
-      }} className="mobile-bottom-nav">
-        {MOBILE_NAV.map(n => {
-          const active = isActive(n.href);
+              {/* Navigation */}
+              <nav className="flex-1 overflow-y-auto px-2 py-4 flex flex-col gap-1">
+                {/* Primary CTA */}
+                <div className="mb-2">
+                  {NAV_PRIMARY.map((item) => (
+                    <div
+                      key={item.href}
+                      onClick={() => setMobileOpen(false)}
+                    >
+                      <NavItem
+                        {...item}
+                        active={isActive(item.href)}
+                        primary={true}
+                      />
+                    </div>
+                  ))}
+                </div>
+
+                {/* Main Navigation */}
+                <div className="space-y-1">
+                  {NAV_MAIN.map((item) => (
+                    <div
+                      key={item.href}
+                      onClick={() => setMobileOpen(false)}
+                    >
+                      <NavItem
+                        {...item}
+                        active={isActive(item.href)}
+                      />
+                    </div>
+                  ))}
+                </div>
+
+                {/* Spacer */}
+                <div className="flex-1" />
+
+                {/* Bottom Navigation */}
+                <div className="space-y-1 pt-2 border-t" style={{ borderColor: "var(--border-subtle)" }}>
+                  {NAV_BOTTOM.map((item) => (
+                    <div
+                      key={item.href}
+                      onClick={() => setMobileOpen(false)}
+                    >
+                      <NavItem
+                        {...item}
+                        active={isActive(item.href)}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </nav>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* ── Mobile Bottom Tab Bar ── */}
+      <motion.div
+        className="mobile-bottom-nav fixed bottom-0 left-0 right-0 h-14 flex items-stretch justify-around z-40 border-t"
+        style={{
+          backgroundColor: "rgba(12,12,18,0.9)",
+          backdropFilter: "blur(8px)",
+          borderColor: "var(--border-subtle)",
+        }}
+      >
+        {MOBILE_NAV.map((item) => {
+          const active = isActive(item.href);
           return (
-            <Link key={n.href} href={n.href} style={{ flex: 1, textDecoration: "none", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3, color: active ? A.accent : A.t5 }}>
-              <n.icon size={20} />
-              <span style={{ fontSize: 9, fontWeight: active ? 600 : 400 }}>{n.label}</span>
+            <Link
+              key={item.href}
+              href={item.href}
+              className="flex-1 flex flex-col items-center justify-center gap-1 transition-colors group"
+              style={{
+                color: active ? "var(--accent-primary)" : "var(--text-secondary)",
+              }}
+            >
+              <motion.div
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <item.icon size={20} />
+              </motion.div>
+              <span className="text-[0.625rem] font-medium truncate">
+                {item.label}
+              </span>
+              {active && (
+                <motion.div
+                  layoutId="mobile-tab-active"
+                  className="absolute bottom-0 left-1/4 right-1/4 h-0.5"
+                  style={{
+                    backgroundColor: "var(--accent-primary)",
+                  }}
+                />
+              )}
             </Link>
           );
         })}
-      </div>
-
+      </motion.div>
     </>
   );
 }

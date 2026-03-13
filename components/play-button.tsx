@@ -1,54 +1,145 @@
 "use client";
+
 import { Play, Square, Loader2 } from "lucide-react";
-import { usePlayer, PlayerTrack } from "@/context/player-context";
+import { usePlayer, type PlayerTrack } from "@/context/player-context";
 
 interface PlayButtonProps {
+  /** The track to play */
   track: PlayerTrack;
-  size?: number;
-  /** If provided, clicking play will load the full list as a queue starting from this track */
+  /** Button size: 'sm' (24px), 'md' (32px), 'lg' (40px) */
+  size?: "sm" | "md" | "lg";
+  /** If provided, clicking play will load the full list as a queue starting from queueIndex */
   queueTracks?: PlayerTrack[];
+  /** Index in queueTracks to start playing from */
   queueIndex?: number;
+  /** Button style: 'filled' (teal bg) or 'ghost' (transparent) */
+  variant?: "filled" | "ghost";
 }
 
-export default function PlayButton({ track, size = 28, queueTracks, queueIndex }: PlayButtonProps) {
-  const { currentTrack, status, play, stop, playAll } = usePlayer();
-  const isThis   = currentTrack?.id === track.id;
-  const loading  = isThis && status === "loading";
-  const active   = isThis && status === "ready";
-  const accent   = "#00B4D8";
-  const iconSize = Math.round(size * 0.42);
+export default function PlayButton({
+  track,
+  size = "md",
+  queueTracks,
+  queueIndex,
+  variant = "filled",
+}: PlayButtonProps) {
+  const { currentTrack, status, play, pause, playAll } = usePlayer();
+
+  // Compute pixel dimensions from size
+  const sizeMap = { sm: 24, md: 32, lg: 40 };
+  const pixels = sizeMap[size];
+  const iconSize = Math.round(pixels * 0.42);
+
+  // Track state
+  const isCurrentTrack = currentTrack?.id === track.id;
+  const isLoading = isCurrentTrack && status === "loading";
+  const isPlaying = isCurrentTrack && status === "ready";
+
+  // Colors
+  const accentColor = "var(--accent-primary)";
+  const borderColor = "var(--border)";
+  const hoverBg = "rgba(0, 212, 170, 0.08)";
 
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (loading) return;
-    if (active) {
-      stop();
+    if (isLoading) return;
+
+    if (isPlaying) {
+      pause();
     } else if (queueTracks && queueIndex != null) {
-      // Play this track and load the full queue for next/prev
       playAll(queueTracks, queueIndex);
     } else {
       play(track);
     }
   };
 
+  // Filled variant: teal background with white icon
+  if (variant === "filled") {
+    return (
+      <button
+        onClick={handleClick}
+        title={isPlaying ? "Pause" : "Play preview"}
+        style={{
+          width: pixels,
+          height: pixels,
+          borderRadius: "50%",
+          flexShrink: 0,
+          border: `1.5px solid ${isPlaying ? accentColor : borderColor}`,
+          backgroundColor: isPlaying ? accentColor : "transparent",
+          cursor: isLoading ? "wait" : "pointer",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          color: isPlaying ? "#ffffff" : "var(--text-secondary)",
+          transition: "all 0.15s",
+        }}
+        onMouseEnter={(e) => {
+          if (!isPlaying && !isLoading) {
+            const btn = e.currentTarget;
+            btn.style.borderColor = accentColor;
+            btn.style.backgroundColor = hoverBg;
+            btn.style.color = accentColor;
+          }
+        }}
+        onMouseLeave={(e) => {
+          if (!isPlaying) {
+            const btn = e.currentTarget;
+            btn.style.borderColor = borderColor;
+            btn.style.backgroundColor = "transparent";
+            btn.style.color = "var(--text-secondary)";
+          }
+        }}
+      >
+        {isLoading ? (
+          <Loader2 size={iconSize} style={{ animation: "spin 0.7s linear infinite" }} />
+        ) : isPlaying ? (
+          <Square size={iconSize} fill="currentColor" />
+        ) : (
+          <Play size={iconSize} fill="currentColor" style={{ marginLeft: 1 }} />
+        )}
+      </button>
+    );
+  }
+
+  // Ghost variant: transparent with teal icon
   return (
     <button
       onClick={handleClick}
-      title={active ? "Close player" : "Play preview"}
+      title={isPlaying ? "Pause" : "Play preview"}
       style={{
-        width: size, height: size, borderRadius: "50%", flexShrink: 0,
-        border: `1.5px solid ${active ? accent : "#e2e8f0"}`,
-        backgroundColor: active ? accent : "transparent",
-        cursor: loading ? "wait" : "pointer",
-        display: "flex", alignItems: "center", justifyContent: "center",
-        color: active ? "#fff" : "#94a3b8", transition: "all 0.15s",
+        width: pixels,
+        height: pixels,
+        borderRadius: "50%",
+        flexShrink: 0,
+        border: "none",
+        backgroundColor: "transparent",
+        cursor: isLoading ? "wait" : "pointer",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        color: isPlaying ? accentColor : "var(--text-secondary)",
+        transition: "all 0.15s",
       }}
-      onMouseEnter={e => { if (!active) { e.currentTarget.style.borderColor = accent; e.currentTarget.style.backgroundColor = "rgba(0,180,216,0.08)"; e.currentTarget.style.color = accent; }}}
-      onMouseLeave={e => { if (!active) { e.currentTarget.style.borderColor = "#e2e8f0"; e.currentTarget.style.backgroundColor = "transparent"; e.currentTarget.style.color = "#94a3b8"; }}}
+      onMouseEnter={(e) => {
+        if (!isLoading) {
+          const btn = e.currentTarget;
+          btn.style.color = accentColor;
+          btn.style.backgroundColor = hoverBg;
+        }
+      }}
+      onMouseLeave={(e) => {
+        const btn = e.currentTarget;
+        btn.style.color = isPlaying ? accentColor : "var(--text-secondary)";
+        btn.style.backgroundColor = "transparent";
+      }}
     >
-      {loading ? <Loader2 size={iconSize} style={{ animation: "spin 0.7s linear infinite" }} /> :
-       active   ? <Square  size={iconSize} fill="currentColor" /> :
-                  <Play    size={iconSize} fill="currentColor" style={{ marginLeft: 1 }} />}
+      {isLoading ? (
+        <Loader2 size={iconSize} style={{ animation: "spin 0.7s linear infinite" }} />
+      ) : isPlaying ? (
+        <Square size={iconSize} fill="currentColor" />
+      ) : (
+        <Play size={iconSize} fill="currentColor" style={{ marginLeft: 1 }} />
+      )}
     </button>
   );
 }
