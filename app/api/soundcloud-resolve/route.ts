@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 export const runtime = "nodejs";
-export const maxDuration = 30;
+export const maxDuration = 60;
 
 /**
  * Server-side SoundCloud playlist resolver.
@@ -94,6 +94,7 @@ export async function GET(req: NextRequest) {
         "Accept-Language": "en-US,en;q=0.9",
       },
       redirect: "follow",
+      signal: AbortSignal.timeout(15000),
     });
 
     if (!res.ok) {
@@ -205,6 +206,7 @@ export async function GET(req: NextRequest) {
                   "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
                   Accept: "application/json",
                 },
+                signal: AbortSignal.timeout(10000),
               }
             );
             if (apiRes.ok) {
